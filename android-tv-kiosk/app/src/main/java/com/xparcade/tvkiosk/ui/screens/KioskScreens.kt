@@ -1,5 +1,6 @@
 package com.xparcade.tvkiosk.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -370,4 +371,3 @@ fun AdminDialog(
         }
     )
 }
-import androidx.compose.foundation.Image
