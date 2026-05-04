@@ -24,7 +24,7 @@ Documentacao inicial:
 ## 2. Fluxo tecnico
 
 1. TV inicia -> app abre em modo fullscreen.
-2. Usuario escolhe tempo de jogo.
+2. TV gera automaticamente Pix de 20 minutos (sem depender de controle).
 3. APK chama backend: `POST /api/sessions/create-payment`.
 4. Backend valida estacao, token, duracao e preco oficial.
 5. Backend cria cobranca no provider ativo (`MOCK` no MVP).
@@ -64,8 +64,7 @@ Edite `.env` com:
 ```bash
 npm install
 npx prisma generate
-npx prisma migrate dev --name init
-npm run prisma:seed
+npm run db:init
 ```
 
 ### 3.4 Subir backend
@@ -94,16 +93,14 @@ Arquivo exemplo: `backend/.env.example`
 - `ADMIN_API_KEY`
 - `SICOOB_CLIENT_ID`, `SICOOB_CLIENT_SECRET`, etc (producao)
 
-### 3.6 Seed inicial
+### 3.6 Bootstrap inicial
 
-Seed cria:
+`npm run db:init` cria/atualiza:
 - Estacao `tv-01`
 - Nome `TV 01 - PS5`
 - Token local `tv01-secret-token`
-- Precos base:
-  - 30 min = R$ 15
-  - 60 min = R$ 25
-  - 120 min = R$ 45
+- Preco fixo:
+  - 20 min = R$ 15
 
 ## 4. Endpoints principais
 
@@ -182,7 +179,6 @@ No app, use o admin local para ajustar:
 - URL do backend
 - `adminApiKey`
 - PIN admin
-- Tempo personalizado
 
 Acesso admin por sequencia secreta no controle:
 - `UP UP DOWN DOWN LEFT RIGHT LEFT RIGHT OK`
@@ -214,8 +210,8 @@ Estrategia MVP:
 ### MVP funcional (agora)
 
 - `PAYMENT_PROVIDER=MOCK`
-- Botao na tela de pagamento: `Simular pagamento`
-- Backend confirma sessao paga e libera timer
+- Fluxo automatico: QR de 20 min aparece sem controle remoto
+- Em mock, confirme pagamento por endpoint admin (`mock-confirm`) para liberar timer
 
 ### Integracao Sicoob (estrutura pronta)
 
