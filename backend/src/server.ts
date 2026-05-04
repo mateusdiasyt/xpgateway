@@ -1,6 +1,6 @@
 import { env } from "./config/env";
 import { logger } from "./core/logger";
-import { prisma } from "./db/prisma";
+import { disconnectPrisma } from "./db/prisma";
 import { buildApp } from "./app";
 
 async function main() {
@@ -13,7 +13,7 @@ async function main() {
   const shutdown = async () => {
     logger.info("Encerrando servidor...");
     server.close(async () => {
-      await prisma.$disconnect();
+      await disconnectPrisma();
       process.exit(0);
     });
   };
@@ -24,6 +24,6 @@ async function main() {
 
 main().catch(async (error) => {
   logger.error("Falha ao iniciar backend", error);
-  await prisma.$disconnect();
+  await disconnectPrisma();
   process.exit(1);
 });
