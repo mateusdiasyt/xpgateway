@@ -32,6 +32,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     private var config: AppConfig = AppConfig()
     private var pollJob: Job? = null
     private var countdownJob: Job? = null
+    private var autoPaymentJob: Job? = null
 
     private val secretSequence = listOf(
         KeyEvent.KEYCODE_DPAD_UP,
@@ -58,6 +59,14 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         return uiState.value.appState != AppState.ADMIN_MODE
     }
 
+    private fun fixedOption(currentConfig: AppConfig): PricingOption {
+        return PricingOption(
+            label = "20 MIN",
+            durationMinutes = fixedDurationMinutes,
+            amount = currentConfig.price20
+        )
+    }
+
     private fun bootstrap() {
         viewModelScope.launch {
             config = preferencesRepository.getConfig()
@@ -69,23 +78,21 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
 
-            refreshStationData()
             restoreOrResetSession()
+            refreshStationData()
         }
     }
 
     fun retryFromError() {
         viewModelScope.launch {
             _uiState.update { it.copy(errorMessage = null, appState = AppState.IDLE) }
-            refreshStationData()
             restoreOrResetSession()
+            refreshStationData()
         }
     }
 
     private fun defaultOptions(currentConfig: AppConfig): List<PricingOption> {
-        return listOf(
-            PricingOption(label = "20 MIN", durationMinutes = fixedDurationMinutes, amount = currentConfig.price20)
-        )
+        return listOf(fixedOption(currentConfig))
     }
 
     fun refreshStationData() {
@@ -129,6 +136,10 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                     appState = if (it.activeSession != null) it.appState else AppState.SELECTING_TIME
                 )
             }
+
+            if (uiState.value.activeSession == null) {
+                ensureAutoPayment()
+            }
         }
     }
 
@@ -156,6 +167,64 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.update { it.copy(appState = AppState.SELECTING_TIME) }
             } else {
                 activateSession(active)
+            }
+        }
+    }
+
+    private fun ensureAutoPayment() {
+        val state = uiState.value
+        if (state.activeSession != null) return
+        if (state.appState == AppState.PAYMENT_PENDING && state.payment != null) return
+        if (autoPaymentJob?.isActive == true) return
+
+        autoPaymentJob = viewModelScope.launch {
+            if (!uiState.value.backendOnline) {
+                _uiState.update {
+                    it.copy(
+                        appState = AppState.SELECTING_TIME,
+                        paymentStatusMessage = "Sem conexao. Tentando reconectar..."
+                    )
+                }
+                delay(4000)
+                refreshStationData()
+                return@launch
+            }
+
+            val option = uiState.value.pricingOptions.firstOrNull() ?: fixedOption(config)
+            _uiState.update {
+                it.copy(
+                    isLoading = true,
+                    selectedOption = option,
+                    appState = AppState.SELECTING_TIME,
+                    paymentStatusMessage = "Gerando Pix..."
+                )
+            }
+
+            runCatching {
+                backendRepository.createPayment(config, option.durationMinutes, option.amount)
+            }.onSuccess { payment ->
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        selectedOption = option,
+                        payment = payment,
+                        appState = AppState.PAYMENT_PENDING,
+                        paymentStatusMessage = "Escaneie e pague para liberar automaticamente."
+                    )
+                }
+                startPaymentPolling(payment.sessionId)
+            }.onFailure {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        appState = AppState.SELECTING_TIME,
+                        payment = null,
+                        selectedOption = null,
+                        paymentStatusMessage = "Nao foi possivel gerar o Pix. Tentando novamente..."
+                    )
+                }
+                delay(3500)
+                refreshStationData()
             }
         }
     }
@@ -255,12 +324,14 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                         "EXPIRED", "CANCELLED" -> {
                             _uiState.update {
                                 it.copy(
-                                    paymentStatusMessage = "Pagamento expirado. Gere um novo Pix.",
+                                    paymentStatusMessage = "Pagamento expirado. Gerando um novo Pix...",
                                     appState = AppState.SELECTING_TIME,
                                     payment = null,
                                     selectedOption = null
                                 )
                             }
+                            delay(1200)
+                            refreshStationData()
                             return@launch
                         }
 
@@ -274,8 +345,11 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }.onFailure {
                     _uiState.update {
-                        it.copy(paymentStatusMessage = "Sem conexão. Chame um atendente.")
+                        it.copy(paymentStatusMessage = "Sem conexao. Tentando reconectar...")
                     }
+                    delay(2000)
+                    refreshStationData()
+                    return@launch
                 }
 
                 delay(4000)
@@ -329,6 +403,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     delay(1200)
                     _uiState.update { it.copy(appState = AppState.SELECTING_TIME) }
+                    refreshStationData()
                     return@launch
                 }
 
@@ -480,3 +555,4 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         return runCatching { Instant.parse(iso).toEpochMilli() }.getOrNull()
     }
 }
+

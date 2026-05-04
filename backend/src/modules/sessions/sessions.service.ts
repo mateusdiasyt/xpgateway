@@ -6,6 +6,7 @@ import { getPaymentProvider } from "../payments/paymentProvider";
 
 const FIXED_PAYMENT_DURATION_MINUTES = 20;
 const FIXED_PAYMENT_AMOUNT = 15.0;
+const PENDING_PAYMENT_TTL_MINUTES = 8;
 
 export interface CreateSessionPaymentInput {
   stationId: string;
@@ -52,6 +53,31 @@ function addMinutes(base: Date, minutes: number): Date {
   return new Date(base.getTime() + minutes * 60_000);
 }
 
+function isPendingExpired(createdAt: Date, now = new Date()): boolean {
+  return addMinutes(createdAt, PENDING_PAYMENT_TTL_MINUTES) <= now;
+}
+
+function pendingPaymentResponse(session: {
+  id: string;
+  durationMinutes: number;
+  amount: Prisma.Decimal;
+  payment: {
+    providerPaymentId: string;
+    qrCode: string;
+    pixCopiaECola: string;
+  };
+}) {
+  return {
+    sessionId: session.id,
+    paymentId: session.payment.providerPaymentId,
+    qrCode: session.payment.qrCode,
+    pixCopiaECola: session.payment.pixCopiaECola,
+    status: "PENDING" as const,
+    amount: moneyToNumber(session.amount),
+    durationMinutes: session.durationMinutes
+  };
+}
+
 export async function createSessionPayment(input: CreateSessionPaymentInput) {
   if (input.durationMinutes !== FIXED_PAYMENT_DURATION_MINUTES) {
     throw new HttpError(400, `Somente ${FIXED_PAYMENT_DURATION_MINUTES} minutos estao disponiveis nesta estacao.`);
@@ -59,7 +85,7 @@ export async function createSessionPayment(input: CreateSessionPaymentInput) {
 
   const station = await prisma.station.findUnique({ where: { id: input.stationId } });
   if (!station || !station.isActive) {
-    throw new HttpError(404, "Estação não encontrada ou inativa.");
+    throw new HttpError(404, "Estacao nao encontrada ou inativa.");
   }
 
   const activeSession = await prisma.session.findFirst({
@@ -69,20 +95,60 @@ export async function createSessionPayment(input: CreateSessionPaymentInput) {
         in: [SessionStatus.PENDING, SessionStatus.PAID, SessionStatus.ACTIVE]
       }
     },
+    include: {
+      payment: true
+    },
     orderBy: {
       createdAt: "desc"
     }
   });
 
-  if (activeSession && (!activeSession.expiresAt || activeSession.expiresAt > new Date())) {
-    throw new HttpError(409, "Já existe uma sessão em andamento ou pagamento pendente.");
+  if (activeSession) {
+    if (activeSession.status === SessionStatus.PENDING) {
+      if (!isPendingExpired(activeSession.createdAt) && activeSession.payment) {
+        return pendingPaymentResponse({
+          id: activeSession.id,
+          durationMinutes: activeSession.durationMinutes,
+          amount: activeSession.amount,
+          payment: {
+            providerPaymentId: activeSession.payment.providerPaymentId,
+            qrCode: activeSession.payment.qrCode,
+            pixCopiaECola: activeSession.payment.pixCopiaECola
+          }
+        });
+      }
+
+      await prisma.$transaction([
+        prisma.payment.updateMany({
+          where: { sessionId: activeSession.id },
+          data: { status: "EXPIRED" }
+        }),
+        prisma.session.update({
+          where: { id: activeSession.id },
+          data: { status: SessionStatus.EXPIRED }
+        }),
+        prisma.auditLog.create({
+          data: {
+            stationId: activeSession.stationId,
+            actor: "system",
+            action: "SESSION_PENDING_EXPIRED",
+            payload: {
+              sessionId: activeSession.id,
+              ttlMinutes: PENDING_PAYMENT_TTL_MINUTES
+            }
+          }
+        })
+      ]);
+    } else if (!activeSession.expiresAt || activeSession.expiresAt > new Date()) {
+      throw new HttpError(409, "Ja existe uma sessao ativa nesta estacao.");
+    }
   }
 
   const officialPrice = await getOfficialPrice(input.stationId, input.durationMinutes);
   const officialAmount = moneyToNumber(officialPrice.amount);
 
   if (input.clientAmount !== undefined && Math.abs(input.clientAmount - officialAmount) > 0.001) {
-    throw new HttpError(400, "Valor inválido. O preço oficial difere do enviado.");
+    throw new HttpError(400, "Valor invalido. O preco oficial difere do enviado.");
   }
 
   const session = await prisma.session.create({
@@ -146,7 +212,7 @@ export async function markSessionPaidByProviderPaymentId(providerPaymentId: stri
   });
 
   if (!payment) {
-    throw new HttpError(404, "Pagamento não encontrado.");
+    throw new HttpError(404, "Pagamento nao encontrado.");
   }
 
   const session = payment.session;
@@ -193,7 +259,32 @@ export async function markSessionPaidByProviderPaymentId(providerPaymentId: stri
 async function autoExpireIfNeeded(sessionId: string) {
   const session = await prisma.session.findUnique({ where: { id: sessionId } });
   if (!session) {
-    throw new HttpError(404, "Sessão não encontrada.");
+    throw new HttpError(404, "Sessao nao encontrada.");
+  }
+
+  if (session.status === SessionStatus.PENDING && isPendingExpired(session.createdAt)) {
+    await prisma.$transaction([
+      prisma.payment.updateMany({
+        where: { sessionId: session.id },
+        data: { status: "EXPIRED" }
+      }),
+      prisma.session.update({
+        where: { id: session.id },
+        data: { status: SessionStatus.EXPIRED }
+      }),
+      prisma.auditLog.create({
+        data: {
+          stationId: session.stationId,
+          actor: "system",
+          action: "SESSION_PENDING_EXPIRED",
+          payload: {
+            sessionId: session.id,
+            ttlMinutes: PENDING_PAYMENT_TTL_MINUTES
+          }
+        }
+      })
+    ]);
+    return;
   }
 
   if (
@@ -235,7 +326,7 @@ export async function getSessionStatus(sessionId: string, stationId: string) {
   });
 
   if (!session) {
-    throw new HttpError(404, "Sessão não encontrada para esta estação.");
+    throw new HttpError(404, "Sessao nao encontrada para esta estacao.");
   }
 
   return {
@@ -257,7 +348,7 @@ export async function getSessionStatus(sessionId: string, stationId: string) {
 export async function forceUnlockStation(stationId: string, durationMinutes: number, actor: string) {
   const station = await prisma.station.findUnique({ where: { id: stationId } });
   if (!station) {
-    throw new HttpError(404, "Estação não encontrada.");
+    throw new HttpError(404, "Estacao nao encontrada.");
   }
 
   const startedAt = new Date();
@@ -294,7 +385,7 @@ export async function forceUnlockStation(stationId: string, durationMinutes: num
 export async function endSession(sessionId: string, actor: string) {
   const session = await prisma.session.findUnique({ where: { id: sessionId } });
   if (!session) {
-    throw new HttpError(404, "Sessão não encontrada.");
+    throw new HttpError(404, "Sessao nao encontrada.");
   }
 
   const updated = await prisma.session.update({
@@ -318,4 +409,3 @@ export async function endSession(sessionId: string, actor: string) {
 
   return updated;
 }
-

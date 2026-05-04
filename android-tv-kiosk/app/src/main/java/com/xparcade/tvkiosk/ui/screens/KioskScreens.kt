@@ -2,6 +2,7 @@ package com.xparcade.tvkiosk.ui.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,23 +12,24 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,11 +41,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.xparcade.tvkiosk.data.local.AppConfig
 import com.xparcade.tvkiosk.R
+import com.xparcade.tvkiosk.data.local.AppConfig
 import com.xparcade.tvkiosk.domain.model.CreatePaymentResponse
-import com.xparcade.tvkiosk.domain.model.PricingOption
-import com.xparcade.tvkiosk.ui.components.NeonSelectableCard
 import com.xparcade.tvkiosk.ui.components.QrCodePanel
 import com.xparcade.tvkiosk.ui.theme.XpBlack
 import com.xparcade.tvkiosk.ui.theme.XpDarkGray
@@ -57,11 +57,11 @@ fun NeonBackground(modifier: Modifier = Modifier, content: @Composable () -> Uni
         modifier = modifier
             .fillMaxSize()
             .background(
-                brush = Brush.verticalGradient(
+                brush = Brush.linearGradient(
                     colors = listOf(
-                        Color(0xFF050505),
-                        Color(0xFF0B0B0B),
-                        Color(0xFF111111)
+                        Color(0xFF040404),
+                        Color(0xFF090909),
+                        Color(0xFF101010)
                     )
                 )
             )
@@ -74,74 +74,67 @@ fun NeonBackground(modifier: Modifier = Modifier, content: @Composable () -> Uni
 @Composable
 fun LockScreen(
     stationName: String,
-    options: List<PricingOption>,
+    durationMinutes: Int,
+    amount: Double,
     backendOnline: Boolean,
-    lastPaymentSummary: String?,
-    onSelect: (PricingOption) -> Unit
+    waitingMessage: String,
+    lastPaymentSummary: String?
 ) {
     NeonBackground {
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Image(
                 painter = painterResource(id = R.drawable.xp_logo_mark),
                 contentDescription = "XP Arcade Logo",
-                modifier = Modifier.height(72.dp)
+                modifier = Modifier.height(56.dp)
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = "XP ARCADE & BAR",
                 color = XpYellow,
-                fontSize = 52.sp,
-                fontFamily = FontFamily.Monospace,
+                fontSize = 40.sp,
                 fontWeight = FontWeight.ExtraBold
             )
             Text(
                 text = stationName,
                 color = XpMagenta,
-                fontSize = 24.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.SemiBold
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(30.dp))
 
-            Text(
-                text = "Escolha seu tempo de jogo",
-                color = XpWhite,
-                fontSize = 38.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.weight(1f)) {
-                items(options) { option ->
-                    val line = if (option.isCustom) {
-                        "${option.durationMinutes} MIN PERSONALIZADO - R$ ${"%.2f".format(option.amount)}"
-                    } else {
-                        "${option.label} - R$ ${"%.2f".format(option.amount)}"
-                    }
-                    NeonSelectableCard(
-                        title = line,
-                        subtitle = "Pressione OK para gerar Pix",
-                        onClick = { onSelect(option) }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.72f)
+                    .background(Color(0x99111111), RoundedCornerShape(20.dp))
+                    .border(1.dp, Color(0x66FF005C), RoundedCornerShape(20.dp))
+                    .padding(horizontal = 26.dp, vertical = 20.dp)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    Text("LIBERACAO AUTOMATICA", color = XpWhite, fontSize = 16.sp)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("$durationMinutes MIN", color = XpYellow, fontSize = 48.sp, fontWeight = FontWeight.Black)
+                    Text("R$ ${"%.2f".format(amount)}", color = XpWhite, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(18.dp))
+                    CircularProgressIndicator(color = XpMagenta, strokeWidth = 3.dp, modifier = Modifier.size(36.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Text(waitingMessage, color = XpWhite, fontSize = 18.sp, textAlign = TextAlign.Center)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        if (backendOnline) "Preparando QR Pix..." else "Sem conexao. Tentando reconectar.",
+                        color = if (backendOnline) Color(0xFFBBBBBB) else XpMagenta,
+                        fontSize = 14.sp
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
-
-            Text(
-                text = if (backendOnline) {
-                    "Pagamento via Pix • Liberação automática"
-                } else {
-                    "Sem conexão. Chame um atendente."
-                },
-                color = if (backendOnline) XpWhite else XpMagenta,
-                fontSize = 20.sp
-            )
             if (!lastPaymentSummary.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(lastPaymentSummary, color = Color(0xFFBBBBBB), fontSize = 16.sp)
+                Spacer(modifier = Modifier.height(14.dp))
+                Text(lastPaymentSummary, color = Color(0xFF9B9B9B), fontSize = 14.sp)
             }
         }
     }
@@ -149,65 +142,75 @@ fun LockScreen(
 
 @Composable
 fun PaymentScreen(
-    option: PricingOption,
+    stationName: String,
     payment: CreatePaymentResponse,
-    waitingMessage: String,
-    onMockConfirm: () -> Unit,
-    onCancel: () -> Unit
+    waitingMessage: String
 ) {
     NeonBackground {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.xp_logo_mark),
-                contentDescription = "XP Arcade Logo",
-                modifier = Modifier.height(72.dp)
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text("Pagamento Pix", color = XpYellow, fontSize = 44.sp, fontWeight = FontWeight.ExtraBold)
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = "${option.label} - R$ ${"%.2f".format(option.amount)}",
-                color = XpWhite,
-                fontSize = 30.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(20.dp))
-
-            QrCodePanel(qrCodeDataUrl = payment.qrCode, modifier = Modifier.weight(1f))
-
-            Spacer(modifier = Modifier.height(14.dp))
-            Text(
-                text = "Escaneie o QR Code com o app do seu banco",
-                color = XpWhite,
-                fontSize = 22.sp,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = payment.pixCopiaECola,
-                color = XpMagenta,
-                fontSize = 16.sp,
-                maxLines = 2
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(waitingMessage, color = XpYellow, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-
-            Spacer(modifier = Modifier.height(14.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                Button(
-                    onClick = onMockConfirm,
-                    colors = ButtonDefaults.buttonColors(containerColor = XpMagenta)
-                ) {
-                    Text("Simular pagamento")
+        Column(modifier = Modifier.fillMaxSize()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text("XP ARCADE & BAR", color = XpYellow, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(stationName, color = XpMagenta, fontSize = 16.sp)
                 }
-                TextButton(onClick = onCancel) {
-                    Text("Cancelar", color = XpWhite)
+                Text("PIX", color = XpWhite, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(22.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier.weight(0.46f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Escaneie para liberar", color = XpWhite, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "${payment.durationMinutes} min � R$ ${"%.2f".format(payment.amount)}",
+                        color = XpYellow,
+                        fontSize = 34.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                    Text("Pagamento aprovado libera automaticamente.", color = Color(0xFFB8B8B8), fontSize = 16.sp)
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xA8111111), RoundedCornerShape(14.dp))
+                            .border(1.dp, Color(0x55FFD000), RoundedCornerShape(14.dp))
+                            .padding(horizontal = 14.dp, vertical = 10.dp)
+                    ) {
+                        Text(waitingMessage, color = XpWhite, fontSize = 15.sp)
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .weight(0.54f)
+                        .background(Color(0xCC0D0D0D), RoundedCornerShape(22.dp))
+                        .border(2.dp, XpMagenta, RoundedCornerShape(22.dp))
+                        .padding(16.dp)
+                ) {
+                    QrCodePanel(qrCodeDataUrl = payment.qrCode, modifier = Modifier.fillMaxWidth())
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = payment.pixCopiaECola.take(90) + if (payment.pixCopiaECola.length > 90) "..." else "",
+                color = Color(0xFFA0A0A0),
+                fontSize = 13.sp,
+                maxLines = 1
+            )
         }
     }
 }
@@ -232,7 +235,7 @@ fun SessionActiveScreen(
             Text(remainingText, color = XpWhite, fontSize = 88.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Black)
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                "Use o console na HDMI durante este período.",
+                "Use o console na HDMI durante este periodo.",
                 color = Color(0xFFDDDDDD),
                 fontSize = 20.sp
             )
@@ -325,18 +328,18 @@ fun AdminDialog(
                 Text("Admin local", color = XpYellow, fontSize = 28.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
-                OutlinedTextField(value = stationName, onValueChange = { stationName = it }, label = { Text("Nome da estação") })
+                OutlinedTextField(value = stationName, onValueChange = { stationName = it }, label = { Text("Nome da estacao") })
                 OutlinedTextField(value = stationId, onValueChange = { stationId = it }, label = { Text("Station ID") })
                 OutlinedTextField(value = stationToken, onValueChange = { stationToken = it }, label = { Text("Station token") })
                 OutlinedTextField(value = backendUrl, onValueChange = { backendUrl = it }, label = { Text("Backend URL") })
                 OutlinedTextField(value = adminApiKey, onValueChange = { adminApiKey = it }, label = { Text("Admin API key") })
                 OutlinedTextField(value = adminPin, onValueChange = { adminPin = it }, label = { Text("PIN admin") })
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Iniciar automático no boot", color = XpWhite)
+                    Text("Iniciar automatico no boot", color = XpWhite)
                     Spacer(modifier = Modifier.width(8.dp))
                     Switch(checked = autoStartApp, onCheckedChange = { autoStartApp = it })
                 }
-                OutlinedTextField(value = price20, onValueChange = { price20 = it }, label = { Text("Pre\u00E7o 20 min") })
+                OutlinedTextField(value = price20, onValueChange = { price20 = it }, label = { Text("Preco 20 min") })
 
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -344,25 +347,24 @@ fun AdminDialog(
                     Spacer(modifier = Modifier.width(8.dp))
                     Switch(checked = customEnabled, onCheckedChange = { customEnabled = it })
                 }
-                OutlinedTextField(value = customDuration, onValueChange = { customDuration = it }, label = { Text("Duração custom (min)") })
-                OutlinedTextField(value = customPrice, onValueChange = { customPrice = it }, label = { Text("Preço custom") })
+                OutlinedTextField(value = customDuration, onValueChange = { customDuration = it }, label = { Text("Duracao custom (min)") })
+                OutlinedTextField(value = customPrice, onValueChange = { customPrice = it }, label = { Text("Preco custom") })
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                OutlinedTextField(value = forceMinutes, onValueChange = { forceMinutes = it }, label = { Text("Forçar liberação (min)") })
+                OutlinedTextField(value = forceMinutes, onValueChange = { forceMinutes = it }, label = { Text("Forcar liberacao (min)") })
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                     Button(onClick = onTestConnection) {
-                        Text("Testar conexão")
+                        Text("Testar conexao")
                     }
                     Button(onClick = { onForceUnlock(forceMinutes.toIntOrNull() ?: 30) }) {
-                        Text("Forçar liberação")
+                        Text("Forcar liberacao")
                     }
                     TextButton(onClick = onEndSession) {
-                        Text("Encerrar sessão", color = XpMagenta)
+                        Text("Encerrar sessao", color = XpMagenta)
                     }
                 }
             }
         }
     )
 }
-

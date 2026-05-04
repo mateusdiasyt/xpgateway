@@ -25,15 +25,12 @@ fun KioskApp(viewModel: KioskViewModel) {
 
     when (uiState.appState) {
         AppState.PAYMENT_PENDING -> {
-            val option = uiState.selectedOption
             val payment = uiState.payment
-            if (option != null && payment != null) {
+            if (payment != null) {
                 PaymentScreen(
-                    option = option,
+                    stationName = uiState.stationName,
                     payment = payment,
-                    waitingMessage = uiState.paymentStatusMessage,
-                    onMockConfirm = { viewModel.confirmMockPayment() },
-                    onCancel = { viewModel.cancelPayment() }
+                    waitingMessage = uiState.paymentStatusMessage
                 )
             } else {
                 CircularProgressIndicator()
@@ -58,12 +55,14 @@ fun KioskApp(viewModel: KioskViewModel) {
         }
 
         else -> {
+            val defaultOption = uiState.pricingOptions.firstOrNull()
             LockScreen(
                 stationName = uiState.stationName,
-                options = uiState.pricingOptions,
+                durationMinutes = defaultOption?.durationMinutes ?: 20,
+                amount = defaultOption?.amount ?: 15.0,
                 backendOnline = uiState.backendOnline,
+                waitingMessage = uiState.paymentStatusMessage,
                 lastPaymentSummary = uiState.lastPaymentSummary,
-                onSelect = { viewModel.onSelectPricing(it) }
             )
         }
     }
