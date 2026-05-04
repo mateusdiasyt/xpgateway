@@ -5,6 +5,7 @@ import { prisma } from "../../db/prisma";
 import { getPaymentProvider } from "../payments/paymentProvider";
 
 const FIXED_PAYMENT_DURATION_MINUTES = 20;
+const FIXED_PAYMENT_AMOUNT = 15.0;
 
 export interface CreateSessionPaymentInput {
   stationId: string;
@@ -34,7 +35,14 @@ export async function getOfficialPrice(stationId: string, durationMinutes: numbe
   });
 
   if (!globalOption) {
-    throw new HttpError(400, "Tempo não disponível para esta estação.");
+    if (durationMinutes === FIXED_PAYMENT_DURATION_MINUTES) {
+      return {
+        amount: new Prisma.Decimal(FIXED_PAYMENT_AMOUNT),
+        durationMinutes: FIXED_PAYMENT_DURATION_MINUTES,
+        label: "20 MIN"
+      };
+    }
+    throw new HttpError(400, "Tempo nao disponivel para esta estacao.");
   }
 
   return globalOption;
@@ -310,3 +318,4 @@ export async function endSession(sessionId: string, actor: string) {
 
   return updated;
 }
+

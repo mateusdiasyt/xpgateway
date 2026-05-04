@@ -3,6 +3,7 @@ import { moneyToNumber } from "../../core/money";
 import { HttpError } from "../../core/httpError";
 
 const FIXED_PAYMENT_DURATION_MINUTES = 20;
+const FIXED_PAYMENT_AMOUNT = 15.0;
 
 export async function getStationWithPricing(stationId: string) {
   const station = await prisma.station.findUnique({
@@ -47,13 +48,24 @@ export async function getStationWithPricing(stationId: string) {
     });
   }
 
+  const fixedPricing = Array.from(mergedByDuration.values())
+    .filter((option) => option.durationMinutes === FIXED_PAYMENT_DURATION_MINUTES)
+    .sort((a, b) => a.durationMinutes - b.durationMinutes);
+
   return {
     id: station.id,
     name: station.name,
     isActive: station.isActive,
-    pricingOptions: Array.from(mergedByDuration.values())
-      .filter((option) => option.durationMinutes === FIXED_PAYMENT_DURATION_MINUTES)
-      .sort((a, b) => a.durationMinutes - b.durationMinutes)
+    pricingOptions:
+      fixedPricing.length > 0
+        ? fixedPricing
+        : [
+            {
+              label: "20 MIN",
+              durationMinutes: FIXED_PAYMENT_DURATION_MINUTES,
+              amount: FIXED_PAYMENT_AMOUNT
+            }
+          ]
   };
 }
 
