@@ -1,0 +1,7 @@
+<resources>
+    <color name="black">#050505</color>
+    <color name="xp_yellow">#FFD000</color>
+    <color name="xp_magenta">#FF005C</color>
+    <color name="xp_dark_gray">#111111</color>
+    <color name="white">#FFFFFF</color>
+</resources>

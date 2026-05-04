@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum SessionStatus {
+  PENDING
+  PAID
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  EXPIRED
+  CANCELLED
+  FAILED
+}
+
+model Station {
+  id               String          @id
+  name             String
+  stationTokenHash String          @map("station_token_hash")
+  isActive         Boolean         @default(true) @map("is_active")
+  autoStartApp     Boolean         @default(true) @map("auto_start_app")
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+
+  pricingOptions   PricingOption[]
+  sessions         Session[]
+  auditLogs        AuditLog[]
+
+  @@map("stations")
+}
+
+model PricingOption {
+  id              String    @id @default(cuid())
+  stationId       String?   @map("station_id")
+  station         Station?  @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  label           String
+  durationMinutes Int       @map("duration_minutes")
+  amount          Decimal   @db.Decimal(10, 2)
+  enabled         Boolean   @default(true)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([stationId, durationMinutes])
+  @@map("pricing_options")
+}
+
+model Session {
+  id              String        @id @default(cuid())
+  stationId       String        @map("station_id")
+  station         Station       @relation(fields: [stationId], references: [id], onDelete: Restrict)
+  durationMinutes Int           @map("duration_minutes")
+  amount          Decimal       @db.Decimal(10, 2)
+  status          SessionStatus @default(PENDING)
+  createdAt       DateTime      @default(now()) @map("created_at")
+  paidAt          DateTime?     @map("paid_at")
+  startedAt       DateTime?     @map("started_at")
+  expiresAt       DateTime?     @map("expires_at")
+  cancelledAt     DateTime?     @map("cancelled_at")
+
+  payment         Payment?
+
+  @@index([stationId, status])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  sessionId         String        @unique @map("session_id")
+  session           Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  provider          String
+  providerPaymentId String        @map("provider_payment_id")
+  pixCopiaECola     String        @map("pix_copia_e_cola")
+  qrCode            String        @map("qr_code")
+  status            PaymentStatus @default(PENDING)
+  rawPayload        Json?         @map("raw_payload")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  @@index([providerPaymentId])
+  @@map("payments")
+}
+
+model AdminPin {
+  id        String   @id @default(cuid())
+  pinHash   String   @map("pin_hash")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("admin_pin")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  stationId  String?  @map("station_id")
+  station    Station? @relation(fields: [stationId], references: [id], onDelete: SetNull)
+  actor      String
+  action     String
+  payload    Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([stationId, createdAt])
+  @@map("audit_logs")
+}

@@ -1,0 +1,24 @@
+package com.xparcade.tvkiosk.domain.state
+
+import com.xparcade.tvkiosk.domain.model.ActiveSession
+import com.xparcade.tvkiosk.domain.model.CreatePaymentResponse
+import com.xparcade.tvkiosk.domain.model.PricingOption
+
+data class KioskUiState(
+    val appState: AppState = AppState.IDLE,
+    val stationName: String = "TV",
+    val pricingOptions: List<PricingOption> = emptyList(),
+    val selectedOption: PricingOption? = null,
+    val payment: CreatePaymentResponse? = null,
+    val activeSession: ActiveSession? = null,
+    val remainingSeconds: Long = 0,
+    val warningMessage: String? = null,
+    val paymentStatusMessage: String = "Aguardando pagamento...",
+    val errorMessage: String? = null,
+    val isLoading: Boolean = false,
+    val isAdminPinPromptVisible: Boolean = false,
+    val adminPinError: String? = null,
+    val isAdminDialogVisible: Boolean = false,
+    val backendOnline: Boolean = true,
+    val lastPaymentSummary: String? = null
+)

@@ -1,0 +1,15 @@
+# Backend
+backend/node_modules/
+backend/dist/
+backend/.env
+backend/prisma/migrations/
+
+# Android
+android-tv-kiosk/.gradle/
+android-tv-kiosk/local.properties
+android-tv-kiosk/app/build/
+android-tv-kiosk/build/
+
+# OS
+.DS_Store
+Thumbs.db
