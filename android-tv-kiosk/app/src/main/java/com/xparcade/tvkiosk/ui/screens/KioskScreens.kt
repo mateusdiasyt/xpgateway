@@ -1,4 +1,4 @@
-package com.xparcade.tvkiosk.ui.screens
+﻿package com.xparcade.tvkiosk.ui.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -87,16 +87,11 @@ fun LockScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Image(
-                painter = painterResource(id = R.drawable.xp_logo_mark),
+                painter = painterResource(id = R.drawable.xp_logo_transparent),
                 contentDescription = "XP Arcade Logo",
-                modifier = Modifier.height(56.dp)
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = "XP ARCADE & BAR",
-                color = XpYellow,
-                fontSize = 40.sp,
-                fontWeight = FontWeight.ExtraBold
+                modifier = Modifier
+                    .fillMaxWidth(0.56f)
+                    .height(124.dp)
             )
             Text(
                 text = stationName,
@@ -154,7 +149,11 @@ fun PaymentScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("XP ARCADE & BAR", color = XpYellow, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
+                    Image(
+                        painter = painterResource(id = R.drawable.xp_logo_transparent),
+                        contentDescription = "XP Arcade Logo",
+                        modifier = Modifier.height(72.dp)
+                    )
                     Text(stationName, color = XpMagenta, fontSize = 16.sp)
                 }
                 Text("PIX", color = XpWhite, fontSize = 20.sp, fontWeight = FontWeight.Bold)
@@ -175,7 +174,7 @@ fun PaymentScreen(
                 ) {
                     Text("Escaneie para liberar", color = XpWhite, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
                     Text(
-                        "${payment.durationMinutes} min � R$ ${"%.2f".format(payment.amount)}",
+                        "${payment.durationMinutes} min • R$ ${"%.2f".format(payment.amount)}",
                         color = XpYellow,
                         fontSize = 34.sp,
                         fontWeight = FontWeight.Black
@@ -368,3 +367,4 @@ fun AdminDialog(
         }
     )
 }
+
