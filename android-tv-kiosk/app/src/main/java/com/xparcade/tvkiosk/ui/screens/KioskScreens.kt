@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -70,7 +69,7 @@ fun NeonBackground(modifier: Modifier = Modifier, content: @Composable () -> Uni
     ) {
         Box(
             modifier = Modifier
-                .matchParentSize()
+                .fillMaxSize()
                 .background(
                     brush = Brush.radialGradient(
                         colors = listOf(Color(0x66FF005C), Color.Transparent),
@@ -81,7 +80,7 @@ fun NeonBackground(modifier: Modifier = Modifier, content: @Composable () -> Uni
         )
         Box(
             modifier = Modifier
-                .matchParentSize()
+                .fillMaxSize()
                 .background(
                     brush = Brush.radialGradient(
                         colors = listOf(Color(0x40FFD000), Color.Transparent),
@@ -92,7 +91,7 @@ fun NeonBackground(modifier: Modifier = Modifier, content: @Composable () -> Uni
         )
         Box(
             modifier = Modifier
-                .matchParentSize()
+                .fillMaxSize()
                 .padding(horizontal = 48.dp, vertical = 28.dp)
         ) {
             content()
