@@ -21,6 +21,7 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 
 class KioskViewModel(application: Application) : AndroidViewModel(application) {
+    private val fixedDurationMinutes = 20
 
     private val preferencesRepository = PreferencesRepository(application.applicationContext)
     private val backendRepository = BackendRepository()
@@ -82,22 +83,9 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun defaultOptions(currentConfig: AppConfig): List<PricingOption> {
-        val defaults = mutableListOf(
-            PricingOption(label = "30 MIN", durationMinutes = 30, amount = currentConfig.price30),
-            PricingOption(label = "1 HORA", durationMinutes = 60, amount = currentConfig.price60),
-            PricingOption(label = "2 HORAS", durationMinutes = 120, amount = currentConfig.price120)
+        return listOf(
+            PricingOption(label = "20 MIN", durationMinutes = fixedDurationMinutes, amount = currentConfig.price20)
         )
-
-        if (currentConfig.customEnabled) {
-            defaults += PricingOption(
-                label = "TEMPO CUSTOM",
-                durationMinutes = currentConfig.customDurationMinutes,
-                amount = currentConfig.customPrice,
-                isCustom = true
-            )
-        }
-
-        return defaults
     }
 
     fun refreshStationData() {
@@ -120,16 +108,12 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                             amount = it.amount,
                             isCustom = false
                         )
-                    }
-                    if (config.customEnabled) {
-                        pricing = pricing + PricingOption(
-                            label = "TEMPO CUSTOM",
-                            durationMinutes = config.customDurationMinutes,
-                            amount = config.customPrice,
-                            isCustom = true
-                        )
-                    }
+                    }.filter { it.durationMinutes == fixedDurationMinutes }
                     lastPayment = backendRepository.getLastPaymentSummary(config)
+
+                    if (pricing.isEmpty()) {
+                        pricing = defaultOptions(config)
+                    }
                 }.onFailure {
                     pricing = defaultOptions(config)
                 }

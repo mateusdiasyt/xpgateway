@@ -286,9 +286,7 @@ fun AdminDialog(
     var adminPin by remember { mutableStateOf(currentConfig.adminPin) }
     var adminApiKey by remember { mutableStateOf(currentConfig.adminApiKey) }
     var autoStartApp by remember { mutableStateOf(currentConfig.autoStartApp) }
-    var price30 by remember { mutableStateOf(currentConfig.price30.toString()) }
-    var price60 by remember { mutableStateOf(currentConfig.price60.toString()) }
-    var price120 by remember { mutableStateOf(currentConfig.price120.toString()) }
+    var price20 by remember { mutableStateOf(currentConfig.price20.toString()) }
     var customEnabled by remember { mutableStateOf(currentConfig.customEnabled) }
     var customDuration by remember { mutableStateOf(currentConfig.customDurationMinutes.toString()) }
     var customPrice by remember { mutableStateOf(currentConfig.customPrice.toString()) }
@@ -306,9 +304,7 @@ fun AdminDialog(
                     adminPin = adminPin,
                     adminApiKey = adminApiKey,
                     autoStartApp = autoStartApp,
-                    price30 = price30.toDoubleOrNull() ?: currentConfig.price30,
-                    price60 = price60.toDoubleOrNull() ?: currentConfig.price60,
-                    price120 = price120.toDoubleOrNull() ?: currentConfig.price120,
+                    price20 = price20.toDoubleOrNull() ?: currentConfig.price20,
                     customEnabled = customEnabled,
                     customDurationMinutes = customDuration.toIntOrNull() ?: currentConfig.customDurationMinutes,
                     customPrice = customPrice.toDoubleOrNull() ?: currentConfig.customPrice
@@ -340,9 +336,7 @@ fun AdminDialog(
                     Spacer(modifier = Modifier.width(8.dp))
                     Switch(checked = autoStartApp, onCheckedChange = { autoStartApp = it })
                 }
-                OutlinedTextField(value = price30, onValueChange = { price30 = it }, label = { Text("Preço 30 min") })
-                OutlinedTextField(value = price60, onValueChange = { price60 = it }, label = { Text("Preço 1 hora") })
-                OutlinedTextField(value = price120, onValueChange = { price120 = it }, label = { Text("Preço 2 horas") })
+                OutlinedTextField(value = price20, onValueChange = { price20 = it }, label = { Text("Pre\u00E7o 20 min") })
 
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -371,3 +365,4 @@ fun AdminDialog(
         }
     )
 }
+

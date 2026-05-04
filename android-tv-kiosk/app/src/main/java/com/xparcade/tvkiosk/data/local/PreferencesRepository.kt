@@ -26,9 +26,7 @@ class PreferencesRepository(private val context: Context) {
         val adminPin = stringPreferencesKey("admin_pin")
         val adminApiKey = stringPreferencesKey("admin_api_key")
         val autoStartApp = booleanPreferencesKey("auto_start_app")
-        val price30 = doublePreferencesKey("price_30")
-        val price60 = doublePreferencesKey("price_60")
-        val price120 = doublePreferencesKey("price_120")
+        val price20 = doublePreferencesKey("price_20")
         val customEnabled = booleanPreferencesKey("custom_enabled")
         val customDuration = intPreferencesKey("custom_duration")
         val customPrice = doublePreferencesKey("custom_price")
@@ -47,9 +45,7 @@ class PreferencesRepository(private val context: Context) {
             stationToken = prefs[Keys.stationToken] ?: AppConfig().stationToken,
             adminPin = prefs[Keys.adminPin] ?: AppConfig().adminPin,
             autoStartApp = prefs[Keys.autoStartApp] ?: AppConfig().autoStartApp,
-            price30 = prefs[Keys.price30] ?: AppConfig().price30,
-            price60 = prefs[Keys.price60] ?: AppConfig().price60,
-            price120 = prefs[Keys.price120] ?: AppConfig().price120,
+            price20 = prefs[Keys.price20] ?: AppConfig().price20,
             customEnabled = prefs[Keys.customEnabled] ?: AppConfig().customEnabled,
             customDurationMinutes = prefs[Keys.customDuration] ?: AppConfig().customDurationMinutes,
             customPrice = prefs[Keys.customPrice] ?: AppConfig().customPrice,
@@ -67,9 +63,7 @@ class PreferencesRepository(private val context: Context) {
             prefs[Keys.stationToken] = config.stationToken
             prefs[Keys.adminPin] = config.adminPin
             prefs[Keys.autoStartApp] = config.autoStartApp
-            prefs[Keys.price30] = config.price30
-            prefs[Keys.price60] = config.price60
-            prefs[Keys.price120] = config.price120
+            prefs[Keys.price20] = config.price20
             prefs[Keys.customEnabled] = config.customEnabled
             prefs[Keys.customDuration] = config.customDurationMinutes
             prefs[Keys.customPrice] = config.customPrice

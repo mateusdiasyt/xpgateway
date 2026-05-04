@@ -2,6 +2,8 @@ import { prisma } from "../../db/prisma";
 import { moneyToNumber } from "../../core/money";
 import { HttpError } from "../../core/httpError";
 
+const FIXED_PAYMENT_DURATION_MINUTES = 20;
+
 export async function getStationWithPricing(stationId: string) {
   const station = await prisma.station.findUnique({
     where: { id: stationId },
@@ -49,7 +51,9 @@ export async function getStationWithPricing(stationId: string) {
     id: station.id,
     name: station.name,
     isActive: station.isActive,
-    pricingOptions: Array.from(mergedByDuration.values()).sort((a, b) => a.durationMinutes - b.durationMinutes)
+    pricingOptions: Array.from(mergedByDuration.values())
+      .filter((option) => option.durationMinutes === FIXED_PAYMENT_DURATION_MINUTES)
+      .sort((a, b) => a.durationMinutes - b.durationMinutes)
   };
 }
 

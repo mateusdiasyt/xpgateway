@@ -4,6 +4,8 @@ import { moneyToNumber } from "../../core/money";
 import { prisma } from "../../db/prisma";
 import { getPaymentProvider } from "../payments/paymentProvider";
 
+const FIXED_PAYMENT_DURATION_MINUTES = 20;
+
 export interface CreateSessionPaymentInput {
   stationId: string;
   durationMinutes: number;
@@ -43,6 +45,10 @@ function addMinutes(base: Date, minutes: number): Date {
 }
 
 export async function createSessionPayment(input: CreateSessionPaymentInput) {
+  if (input.durationMinutes !== FIXED_PAYMENT_DURATION_MINUTES) {
+    throw new HttpError(400, `Somente ${FIXED_PAYMENT_DURATION_MINUTES} minutos estao disponiveis nesta estacao.`);
+  }
+
   const station = await prisma.station.findUnique({ where: { id: input.stationId } });
   if (!station || !station.isActive) {
     throw new HttpError(404, "Estação não encontrada ou inativa.");

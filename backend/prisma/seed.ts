@@ -23,11 +23,7 @@ async function main() {
     }
   });
 
-  const defaultPricing = [
-    { label: "30 MIN", durationMinutes: 30, amount: 15.0 },
-    { label: "1 HORA", durationMinutes: 60, amount: 25.0 },
-    { label: "2 HORAS", durationMinutes: 120, amount: 45.0 }
-  ];
+  const defaultPricing = [{ label: "20 MIN", durationMinutes: 20, amount: 15.0 }];
 
   for (const option of defaultPricing) {
     const existing = await prisma.pricingOption.findFirst({
@@ -58,6 +54,18 @@ async function main() {
       });
     }
   }
+
+  await prisma.pricingOption.updateMany({
+    where: {
+      stationId: null,
+      durationMinutes: {
+        not: 20
+      }
+    },
+    data: {
+      enabled: false
+    }
+  });
 
   console.log("Seed concluído.");
   console.log(`Station ID: ${stationId}`);
