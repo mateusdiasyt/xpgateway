@@ -15,10 +15,14 @@ const envSchema = z.object({
 
   SICOOB_CLIENT_ID: z.string().optional(),
   SICOOB_CLIENT_SECRET: z.string().optional(),
+  SICOOB_PIX_KEY: z.string().optional(),
+  SICOOB_TOKEN_URL: z.string().optional(),
+  SICOOB_SCOPES: z.string().optional().catch("cob.write cob.read pix.read"),
   SICOOB_CERT_BASE64: z.string().optional(),
   SICOOB_KEY_BASE64: z.string().optional(),
+  SICOOB_KEY_PASSPHRASE: z.string().optional(),
   SICOOB_WEBHOOK_SECRET: z.string().optional(),
-  SICOOB_BASE_URL: z.string().catch("https://api.sisbr.com.br")
+  SICOOB_BASE_URL: z.string().catch("https://api.sicoob.com.br/pix/api/v2")
 });
 
 function normalizeHttpUrl(raw: string): string {
@@ -36,5 +40,7 @@ if (!parsed.DATABASE_URL) {
 
 export const env = {
   ...parsed,
-  BACKEND_PUBLIC_URL: normalizeHttpUrl(parsed.BACKEND_PUBLIC_URL)
+  BACKEND_PUBLIC_URL: normalizeHttpUrl(parsed.BACKEND_PUBLIC_URL),
+  SICOOB_BASE_URL: normalizeHttpUrl(parsed.SICOOB_BASE_URL),
+  SICOOB_TOKEN_URL: parsed.SICOOB_TOKEN_URL ? normalizeHttpUrl(parsed.SICOOB_TOKEN_URL) : undefined
 };

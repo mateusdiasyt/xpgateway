@@ -91,7 +91,12 @@ Arquivo exemplo: `backend/.env.example`
 - `PAYMENT_PROVIDER=MOCK|SICOOB`
 - `STATION_TOKEN_SALT`
 - `ADMIN_API_KEY`
-- `SICOOB_CLIENT_ID`, `SICOOB_CLIENT_SECRET`, etc (producao)
+- `SICOOB_CLIENT_ID`, `SICOOB_CLIENT_SECRET`
+- `SICOOB_PIX_KEY` (chave Pix recebedor)
+- `SICOOB_TOKEN_URL` (OAuth client_credentials)
+- `SICOOB_BASE_URL` (Pix API v2)
+- `SICOOB_SCOPES` (ex: `cob.write cob.read pix.read`)
+- `SICOOB_CERT_BASE64`, `SICOOB_KEY_BASE64` (mTLS)
 
 ### 3.6 Bootstrap inicial
 
@@ -213,16 +218,23 @@ Estrategia MVP:
 - Fluxo automatico: QR de 20 min aparece sem controle remoto
 - Em mock, confirme pagamento por endpoint admin (`mock-confirm`) para liberar timer
 
-### Integracao Sicoob (estrutura pronta)
+### Integracao Sicoob (implementada no backend)
 
-Arquivo preparado:
+Arquivo:
 - `backend/src/modules/payments/paymentProvider.sicoob.ts`
 
-Passos producao:
-1. Implementar OAuth/certificado conforme docs oficiais Sicoob.
-2. Criar cobranca Pix real.
-3. Validar assinatura/autenticidade webhook.
-4. Habilitar `PAYMENT_PROVIDER=SICOOB`.
+Fluxo implementado:
+1. OAuth `client_credentials` com mTLS.
+2. Criacao de cobranca imediata `PUT /cob/{txid}`.
+3. Retorno de `brcode` e QR em base64 para o app.
+4. Polling de status em `GET /cob/{txid}` no endpoint de sessao.
+5. Webhook `/api/webhooks/sicoob` aceitando payload Pix com `pix[].txid`.
+
+Observacao importante (Vercel):
+- O webhook oficial do Sicoob e baseado em mTLS no canal de notificacao.
+- Vercel nao oferece terminacao mTLS custom para validar certificado cliente do Sicoob.
+- Por isso, neste projeto a liberacao automatica funciona tambem por polling de status no backend (independe de webhook).
+- Se quiser webhook com mTLS estrito, hospede esse endpoint em infraestrutura propria (Nginx/API Gateway) e encaminhe para o backend.
 
 ## 12. Seguranca aplicada
 
@@ -240,6 +252,6 @@ Entregue neste MVP:
 - Admin local com configuracoes e acoes de liberacao/encerramento
 
 Pendencias para producao final:
-- Implementacao real do provider Sicoob
+- Ajustar endpoints finais de token/baseURL conforme credencial da sua cooperativa
 - Hardening por modelo de TV em campo
 - Assinatura/gerenciamento de chave de release definitiva

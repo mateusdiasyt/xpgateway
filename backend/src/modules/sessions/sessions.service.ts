@@ -3,6 +3,7 @@ import { HttpError } from "../../core/httpError";
 import { moneyToNumber } from "../../core/money";
 import { prisma } from "../../db/prisma";
 import { getPaymentProvider } from "../payments/paymentProvider";
+import type { ProviderPaymentStatus } from "../payments/types";
 
 const FIXED_PAYMENT_DURATION_MINUTES = 20;
 const FIXED_PAYMENT_AMOUNT = 15.0;
@@ -312,10 +313,57 @@ async function autoExpireIfNeeded(sessionId: string) {
   }
 }
 
+async function applyProviderStatusToSession(
+  session: {
+    id: string;
+    stationId: string;
+    payment: { providerPaymentId: string } | null;
+  },
+  providerStatus: ProviderPaymentStatus
+) {
+  if (!session.payment) return;
+
+  if (providerStatus === "PAID") {
+    await markSessionPaidByProviderPaymentId(session.payment.providerPaymentId, new Date());
+    return;
+  }
+
+  if (providerStatus === "PENDING") return;
+
+  const nextSessionStatus = providerStatus === "EXPIRED" ? SessionStatus.EXPIRED : SessionStatus.CANCELLED;
+
+  await prisma.$transaction([
+    prisma.payment.updateMany({
+      where: { sessionId: session.id },
+      data: {
+        status: providerStatus
+      }
+    }),
+    prisma.session.update({
+      where: { id: session.id },
+      data: {
+        status: nextSessionStatus
+      }
+    }),
+    prisma.auditLog.create({
+      data: {
+        stationId: session.stationId,
+        actor: "provider",
+        action: "SESSION_PROVIDER_STATUS_SYNC",
+        payload: {
+          sessionId: session.id,
+          providerPaymentId: session.payment.providerPaymentId,
+          providerStatus
+        }
+      }
+    })
+  ]);
+}
+
 export async function getSessionStatus(sessionId: string, stationId: string) {
   await autoExpireIfNeeded(sessionId);
 
-  const session = await prisma.session.findFirst({
+  let session = await prisma.session.findFirst({
     where: {
       id: sessionId,
       stationId
@@ -324,6 +372,47 @@ export async function getSessionStatus(sessionId: string, stationId: string) {
       payment: true
     }
   });
+
+  if (!session) {
+    throw new HttpError(404, "Sessao nao encontrada para esta estacao.");
+  }
+
+  if (session.status === SessionStatus.PENDING && session.payment) {
+    const provider = getPaymentProvider();
+
+    try {
+      const providerStatus = await provider.syncPaymentStatus?.({
+        providerPaymentId: session.payment.providerPaymentId
+      });
+
+      if (providerStatus && providerStatus !== "PENDING") {
+        await applyProviderStatusToSession(
+          {
+            id: session.id,
+            stationId: session.stationId,
+            payment: session.payment
+          },
+          providerStatus
+        );
+
+        session = await prisma.session.findFirst({
+          where: {
+            id: sessionId,
+            stationId
+          },
+          include: {
+            payment: true
+          }
+        });
+
+        if (!session) {
+          throw new HttpError(404, "Sessao nao encontrada para esta estacao.");
+        }
+      }
+    } catch {
+      // Falha de sincronizacao externa nao deve derrubar o polling da TV.
+    }
+  }
 
   if (!session) {
     throw new HttpError(404, "Sessao nao encontrada para esta estacao.");
