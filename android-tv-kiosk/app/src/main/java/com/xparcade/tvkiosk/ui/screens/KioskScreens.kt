@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -33,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -59,13 +61,80 @@ fun NeonBackground(modifier: Modifier = Modifier, content: @Composable () -> Uni
             .background(
                 brush = Brush.linearGradient(
                     colors = listOf(
-                        Color(0xFF040404),
-                        Color(0xFF090909),
-                        Color(0xFF101010)
+                        Color(0xFF050505),
+                        Color(0xFF0A0D14),
+                        Color(0xFF050505)
                     )
                 )
             )
-            .padding(horizontal = 48.dp, vertical = 28.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(Color(0x66FF005C), Color.Transparent),
+                        center = Offset(1480f, 170f),
+                        radius = 980f
+                    )
+                )
+        )
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(Color(0x40FFD000), Color.Transparent),
+                        center = Offset(220f, 1020f),
+                        radius = 900f
+                    )
+                )
+        )
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .padding(horizontal = 48.dp, vertical = 28.dp)
+        ) {
+            content()
+        }
+    }
+}
+
+@Composable
+private fun StationBadge(stationName: String, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .background(
+                brush = Brush.horizontalGradient(
+                    colors = listOf(Color(0x44FF005C), Color(0x33FFD000))
+                ),
+                shape = RoundedCornerShape(999.dp)
+            )
+            .border(1.dp, Color(0x99FF005C), RoundedCornerShape(999.dp))
+            .padding(horizontal = 18.dp, vertical = 9.dp)
+    ) {
+        Text(
+            text = stationName.uppercase(),
+            color = XpWhite,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = 1.2.sp
+        )
+    }
+}
+
+@Composable
+private fun HeroPanel(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    Box(
+        modifier = modifier
+            .background(
+                brush = Brush.linearGradient(
+                    colors = listOf(Color(0xDD0B0F17), Color(0xCC0A0A0A))
+                ),
+                shape = RoundedCornerShape(28.dp)
+            )
+            .border(1.dp, Color(0x66FF005C), RoundedCornerShape(28.dp))
+            .padding(horizontal = 34.dp, vertical = 28.dp)
     ) {
         content()
     }
@@ -80,6 +149,8 @@ fun LockScreen(
     waitingMessage: String,
     lastPaymentSummary: String?
 ) {
+    val waitingAlreadyMentionsOffline = waitingMessage.contains("Sem conexao", ignoreCase = true)
+
     NeonBackground {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -90,46 +161,61 @@ fun LockScreen(
                 painter = painterResource(id = R.drawable.xp_logo_transparent),
                 contentDescription = "XP Arcade Logo",
                 modifier = Modifier
-                    .fillMaxWidth(0.56f)
-                    .height(124.dp)
+                    .fillMaxWidth(0.48f)
+                    .height(118.dp)
             )
+            Spacer(modifier = Modifier.height(6.dp))
+            StationBadge(stationName = stationName)
+
+            Spacer(modifier = Modifier.height(18.dp))
             Text(
-                text = stationName,
-                color = XpMagenta,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.SemiBold
+                text = "PIX AUTOMATICO",
+                color = Color(0xFFC8CBD3),
+                fontSize = 15.sp,
+                letterSpacing = 3.sp
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Escaneie e jogue sem atendente",
+                color = XpWhite,
+                fontSize = 30.sp,
+                fontWeight = FontWeight.Bold
             )
 
-            Spacer(modifier = Modifier.height(30.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(0.72f)
-                    .background(Color(0x99111111), RoundedCornerShape(20.dp))
-                    .border(1.dp, Color(0x66FF005C), RoundedCornerShape(20.dp))
-                    .padding(horizontal = 26.dp, vertical = 20.dp)
-            ) {
+            HeroPanel(modifier = Modifier.fillMaxWidth(0.76f)) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                    Text("LIBERACAO AUTOMATICA", color = XpWhite, fontSize = 16.sp)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text("$durationMinutes MIN", color = XpYellow, fontSize = 48.sp, fontWeight = FontWeight.Black)
-                    Text("R$ ${"%.2f".format(amount)}", color = XpWhite, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(18.dp))
-                    CircularProgressIndicator(color = XpMagenta, strokeWidth = 3.dp, modifier = Modifier.size(36.dp))
-                    Spacer(modifier = Modifier.height(14.dp))
-                    Text(waitingMessage, color = XpWhite, fontSize = 18.sp, textAlign = TextAlign.Center)
-                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        if (backendOnline) "Preparando QR Pix..." else "Sem conexao. Tentando reconectar.",
-                        color = if (backendOnline) Color(0xFFBBBBBB) else XpMagenta,
-                        fontSize = 14.sp
+                        text = "PLANO EXPRESS",
+                        color = Color(0xFF9EA5B2),
+                        fontSize = 14.sp,
+                        letterSpacing = 2.2.sp
                     )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text("$durationMinutes MIN", color = XpYellow, fontSize = 68.sp, fontWeight = FontWeight.Black)
+                    Text("R$ ${"%.2f".format(amount)}", color = XpWhite, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(color = XpMagenta, strokeWidth = 3.dp, modifier = Modifier.size(30.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(waitingMessage, color = XpWhite, fontSize = 19.sp)
+                    }
+                    if (!waitingAlreadyMentionsOffline) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            if (backendOnline) "Backend online - gerando QR em tempo real" else "Sem conexao - tentando reconectar",
+                            color = if (backendOnline) Color(0xFFADB5C6) else XpMagenta,
+                            fontSize = 14.sp,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
 
             if (!lastPaymentSummary.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(14.dp))
-                Text(lastPaymentSummary, color = Color(0xFF9B9B9B), fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(lastPaymentSummary, color = Color(0xFF8E95A3), fontSize = 13.sp)
             }
         }
     }
@@ -152,64 +238,71 @@ fun PaymentScreen(
                     Image(
                         painter = painterResource(id = R.drawable.xp_logo_transparent),
                         contentDescription = "XP Arcade Logo",
-                        modifier = Modifier.height(72.dp)
+                        modifier = Modifier.height(76.dp)
                     )
-                    Text(stationName, color = XpMagenta, fontSize = 16.sp)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    StationBadge(stationName = stationName)
                 }
-                Text("PIX", color = XpWhite, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("PIX LIVE", color = XpWhite, fontSize = 20.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(22.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
-                    modifier = Modifier.weight(0.46f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text("Escaneie para liberar", color = XpWhite, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
-                    Text(
-                        "${payment.durationMinutes} min • R$ ${"%.2f".format(payment.amount)}",
-                        color = XpYellow,
-                        fontSize = 34.sp,
-                        fontWeight = FontWeight.Black
-                    )
-                    Text("Pagamento aprovado libera automaticamente.", color = Color(0xFFB8B8B8), fontSize = 16.sp)
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color(0xA8111111), RoundedCornerShape(14.dp))
-                            .border(1.dp, Color(0x55FFD000), RoundedCornerShape(14.dp))
-                            .padding(horizontal = 14.dp, vertical = 10.dp)
-                    ) {
-                        Text(waitingMessage, color = XpWhite, fontSize = 15.sp)
+                HeroPanel(modifier = Modifier.weight(0.42f)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("PAGAMENTO PIX", color = Color(0xFF9EA5B2), fontSize = 14.sp, letterSpacing = 2.2.sp)
+                        Text("Liberacao instantanea", color = XpWhite, fontSize = 34.sp, fontWeight = FontWeight.Bold, lineHeight = 38.sp)
+                        Text(
+                            "${payment.durationMinutes} MIN  •  R$ ${"%.2f".format(payment.amount)}",
+                            color = XpYellow,
+                            fontSize = 30.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                        Text(
+                            "Escaneie o QR Code no app do seu banco. Pagou, liberou automaticamente.",
+                            color = Color(0xFFB6BECD),
+                            fontSize = 16.sp,
+                            lineHeight = 21.sp
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0x66101319), RoundedCornerShape(16.dp))
+                                .border(1.dp, Color(0x55FFD000), RoundedCornerShape(16.dp))
+                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                        ) {
+                            Text(waitingMessage, color = XpWhite, fontSize = 15.sp)
+                        }
                     }
                 }
 
                 Box(
                     modifier = Modifier
-                        .weight(0.54f)
-                        .background(Color(0xCC0D0D0D), RoundedCornerShape(22.dp))
-                        .border(2.dp, XpMagenta, RoundedCornerShape(22.dp))
-                        .padding(16.dp)
+                        .weight(0.58f)
+                        .background(Color(0xCC0D1117), RoundedCornerShape(30.dp))
+                        .border(1.dp, Color(0x88FF005C), RoundedCornerShape(30.dp))
+                        .padding(18.dp)
                 ) {
                     QrCodePanel(qrCodeDataUrl = payment.qrCode, modifier = Modifier.fillMaxWidth())
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = payment.pixCopiaECola.take(90) + if (payment.pixCopiaECola.length > 90) "..." else "",
-                color = Color(0xFFA0A0A0),
-                fontSize = 13.sp,
-                maxLines = 1
-            )
+            HeroPanel(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = payment.pixCopiaECola.take(130) + if (payment.pixCopiaECola.length > 130) "..." else "",
+                    color = Color(0xFFA4ADBD),
+                    fontSize = 13.sp,
+                    maxLines = 1
+                )
+            }
         }
     }
 }
@@ -226,25 +319,36 @@ fun SessionActiveScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("TV LIBERADA", color = XpYellow, fontSize = 58.sp, fontWeight = FontWeight.ExtraBold)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(stationName, color = XpMagenta, fontSize = 24.sp)
-            Spacer(modifier = Modifier.height(20.dp))
-            Text("Tempo restante", color = XpWhite, fontSize = 28.sp)
-            Text(remainingText, color = XpWhite, fontSize = 88.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Black)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                "Use o console na HDMI durante este periodo.",
-                color = Color(0xFFDDDDDD),
-                fontSize = 20.sp
-            )
+            HeroPanel(modifier = Modifier.fillMaxWidth(0.72f)) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    Text("TV LIBERADA", color = XpYellow, fontSize = 56.sp, fontWeight = FontWeight.ExtraBold)
+                    Spacer(modifier = Modifier.height(10.dp))
+                    StationBadge(stationName = stationName)
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Text("Tempo restante", color = Color(0xFFB8C0CF), fontSize = 22.sp)
+                    Text(
+                        remainingText,
+                        color = XpWhite,
+                        fontSize = 88.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Black
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Use o console na HDMI durante este periodo.",
+                        color = Color(0xFFE1E5EF),
+                        fontSize = 20.sp
+                    )
+                }
+            }
 
             if (!warning.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(18.dp))
                 Box(
                     modifier = Modifier
-                        .background(XpDarkGray, shape = MaterialTheme.shapes.medium)
-                        .padding(horizontal = 18.dp, vertical = 10.dp)
+                        .background(Color(0xAA111111), shape = MaterialTheme.shapes.medium)
+                        .border(1.dp, Color(0x88FF005C), MaterialTheme.shapes.medium)
+                        .padding(horizontal = 20.dp, vertical = 11.dp)
                 ) {
                     Text(warning, color = XpMagenta, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                 }
