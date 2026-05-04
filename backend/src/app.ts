@@ -12,6 +12,14 @@ export function buildApp() {
   app.use(cors());
   app.use(express.json({ limit: "2mb" }));
 
+  app.get("/", (_req, res) => {
+    res.json({
+      ok: true,
+      service: "xp-arcade-backend",
+      message: "Backend online. Use /health and /api/* endpoints."
+    });
+  });
+
   app.get("/health", (_req, res) => {
     res.json({ ok: true, service: "xp-arcade-backend" });
   });
