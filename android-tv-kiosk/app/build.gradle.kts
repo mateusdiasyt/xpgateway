@@ -19,10 +19,10 @@ android {
             useSupportLibrary = true
         }
 
-        buildConfigField("String", "DEFAULT_BACKEND_URL", '"http://192.168.0.10:8080"')
-        buildConfigField("String", "DEFAULT_STATION_ID", '"tv-01"')
-        buildConfigField("String", "DEFAULT_STATION_NAME", '"TV 01 - PS5"')
-        buildConfigField("String", "DEFAULT_STATION_TOKEN", '"tv01-secret-token"')
+        buildConfigField("String", "DEFAULT_BACKEND_URL", "\"http://192.168.0.10:8080\"")
+        buildConfigField("String", "DEFAULT_STATION_ID", "\"tv-01\"")
+        buildConfigField("String", "DEFAULT_STATION_NAME", "\"TV 01 - PS5\"")
+        buildConfigField("String", "DEFAULT_STATION_TOKEN", "\"tv01-secret-token\"")
     }
 
     buildTypes {
