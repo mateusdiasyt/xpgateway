@@ -37,6 +37,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     private var countdownJob: Job? = null
     private var preparationJob: Job? = null
     private var pdvPollJob: Job? = null
+    private var activeMonitorJob: Job? = null
 
     private val secretSequence = listOf(
         KeyEvent.KEYCODE_DPAD_UP,
@@ -224,6 +225,11 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         pdvPollJob = null
     }
 
+    private fun stopActiveSessionMonitor() {
+        activeMonitorJob?.cancel()
+        activeMonitorJob = null
+    }
+
     private fun stopPreparationCountdown() {
         preparationJob?.cancel()
         preparationJob = null
@@ -333,6 +339,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             stopPdvPolling()
             stopPreparationCountdown()
+            stopActiveSessionMonitor()
             warningFiveShown = false
             warningOneShown = false
             preferencesRepository.saveActiveSession(session)
@@ -349,7 +356,78 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             startCountdown(session)
+            if (session.source == "pdv") {
+                startActiveSessionMonitor(session)
+            }
         }
+    }
+
+    private fun startActiveSessionMonitor(session: ActiveSession) {
+        activeMonitorJob?.cancel()
+        activeMonitorJob = viewModelScope.launch {
+            delay(5000)
+
+            while (true) {
+                val result = runCatching { backendRepository.getTvStatus(config) }
+
+                result.onSuccess { tvStatus ->
+                    val isPreparingStatus = tvStatus.status.equals("PREPARING", true)
+                    val isActiveStatus =
+                        tvStatus.status.equals("ACTIVE", true) ||
+                            tvStatus.status.equals("UNLOCKED", true) ||
+                            tvStatus.status.equals("RELEASED", true)
+
+                    if (!isPreparingStatus && !isActiveStatus) {
+                        handleRemoteSessionEnded("Tempo encerrado pelo caixa.")
+                        return@launch
+                    }
+
+                    if (isActiveStatus && tvStatus.remainingSeconds <= 0) {
+                        handleRemoteSessionEnded("Tempo encerrado pelo caixa.")
+                        return@launch
+                    }
+
+                    val remoteSessionId = tvStatus.saleId
+                    if (!remoteSessionId.isNullOrBlank() && remoteSessionId != session.sessionId) {
+                        val remoteExpiresAt = parseIsoToMillis(tvStatus.unlockedUntil)
+                            ?: parseIsoToMillis(tvStatus.releasedUntil)
+                            ?: (System.currentTimeMillis() + tvStatus.remainingSeconds.coerceAtLeast(1) * 1000L)
+
+                        activateSession(
+                            ActiveSession(
+                                sessionId = remoteSessionId,
+                                expiresAtEpochMillis = remoteExpiresAt,
+                                durationMinutes = ((tvStatus.remainingSeconds.coerceAtLeast(1) + 59) / 60).toInt().coerceAtLeast(1),
+                                source = "pdv"
+                            )
+                        )
+                        return@launch
+                    }
+                }
+
+                delay(5000)
+            }
+        }
+    }
+
+    private suspend fun handleRemoteSessionEnded(message: String) {
+        activeMonitorJob = null
+        preferencesRepository.clearActiveSession()
+        countdownJob?.cancel()
+        stopPreparationCountdown()
+        bringKioskToFront()
+        _uiState.update {
+            it.copy(
+                activeSession = null,
+                remainingSeconds = 0,
+                preparationRemainingSeconds = 0,
+                warningMessage = null,
+                appState = AppState.SELECTING_TIME,
+                paymentStatusMessage = message
+            )
+        }
+        ensureUnlockFlow()
+        _uiState.update { it.copy(paymentStatusMessage = message) }
     }
 
     private fun startPreparationCountdown(
@@ -412,6 +490,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
 
                 if (remainingSeconds <= 0) {
                     preferencesRepository.clearActiveSession()
+                    stopActiveSessionMonitor()
                     bringKioskToFront()
                     _uiState.update {
                         it.copy(
@@ -488,6 +567,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
             preferencesRepository.clearActiveSession()
             countdownJob?.cancel()
             stopPreparationCountdown()
+            stopActiveSessionMonitor()
             _uiState.update {
                 it.copy(
                     activeSession = null,

@@ -263,6 +263,7 @@ Estrategia MVP:
 - Sessao ativa tenta mandar o app para o fundo para revelar a ultima fonte/HDMI.
 - Se o modelo da TV nao permitir esse retorno automatico, a tela ativa orienta o usuario a trocar para HDMI.
 - O contador operacional fica no PDV.
+- Durante a sessao, o APK continua consultando o PDV. Se o caixa clicar em `Encerrar tempo` na aba Servicos, o app volta para o bloqueio na proxima consulta.
 - Ao expirar, app retorna ao bloqueio.
 
 ## 11. Backend legado: Mock primeiro, Sicoob depois
