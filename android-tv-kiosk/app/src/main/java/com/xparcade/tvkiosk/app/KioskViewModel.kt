@@ -243,36 +243,34 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                             tvStatus.status.equals("RELEASED", true)
 
                     if (isPreparingStatus) {
-                        val serverNow = parseIsoToMillis(tvStatus.serverTime) ?: System.currentTimeMillis()
+                        val localNow = System.currentTimeMillis()
                         val preparationRemainingMillis = tvStatus.preparationRemainingSeconds
                             ?.coerceAtLeast(0)
                             ?.times(1000L)
-                        val serviceStartsAt = preparationRemainingMillis?.let { System.currentTimeMillis() + it }
+                        val serviceStartsAt = preparationRemainingMillis?.let { localNow + it }
                             ?: parseIsoToMillis(tvStatus.serviceStartsAt)
                             ?: parseIsoToMillis(tvStatus.preparationEndsAt)
-                            ?: (serverNow + tvStatus.preparationRemainingSeconds.orZero().coerceAtLeast(0) * 1000L)
-                        val unlockedUntil = parseIsoToMillis(tvStatus.unlockedUntil)
+                            ?: (localNow + tvStatus.preparationRemainingSeconds.orZero().coerceAtLeast(0) * 1000L)
+                        val serviceDurationSeconds = tvStatus.remainingSeconds.coerceAtLeast(60)
+                        val unlockedUntil = serviceStartsAt + serviceDurationSeconds * 1000L
+                        val serverUnlockedUntil = parseIsoToMillis(tvStatus.unlockedUntil)
                             ?: parseIsoToMillis(tvStatus.releasedUntil)
 
-                        if (unlockedUntil != null && serviceStartsAt > System.currentTimeMillis()) {
+                        if (serverUnlockedUntil != null && serviceStartsAt > localNow) {
                             startPreparationCountdown(
                                 sessionId = tvStatus.saleId ?: "pdv-${System.currentTimeMillis()}",
                                 startsAtEpochMillis = serviceStartsAt,
                                 expiresAtEpochMillis = unlockedUntil,
-                                durationMinutes = ((unlockedUntil - serviceStartsAt).coerceAtLeast(60_000L) / 60_000L).toInt()
-                                    .coerceAtLeast(1)
+                                durationMinutes = ((serviceDurationSeconds + 59) / 60).toInt().coerceAtLeast(1)
                             )
                             return@launch
                         }
                     } else if (isActiveStatus) {
-                        val serverNow = parseIsoToMillis(tvStatus.serverTime) ?: System.currentTimeMillis()
-                        val unlockedUntil = parseIsoToMillis(tvStatus.unlockedUntil)
-                            ?: parseIsoToMillis(tvStatus.releasedUntil)
-                        val expiresAt = unlockedUntil ?: (serverNow + tvStatus.remainingSeconds.coerceAtLeast(0) * 1000L)
-                        val remaining = ((expiresAt - System.currentTimeMillis()) / 1000L).coerceAtLeast(0)
+                        val remaining = tvStatus.remainingSeconds.coerceAtLeast(0)
+                        val expiresAt = System.currentTimeMillis() + remaining * 1000L
                         val durationMinutes = ((remaining + 59) / 60).toInt().coerceAtLeast(1)
 
-                        if (expiresAt > System.currentTimeMillis()) {
+                        if (remaining > 0) {
                             val active = ActiveSession(
                                 sessionId = tvStatus.saleId ?: "pdv-${System.currentTimeMillis()}",
                                 expiresAtEpochMillis = expiresAt,
