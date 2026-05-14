@@ -44,9 +44,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.xparcade.tvkiosk.R
 import com.xparcade.tvkiosk.data.local.AppConfig
-import com.xparcade.tvkiosk.data.local.UnlockMode
-import com.xparcade.tvkiosk.domain.model.CreatePaymentResponse
-import com.xparcade.tvkiosk.ui.components.QrCodePanel
 import com.xparcade.tvkiosk.ui.theme.XpBlack
 import com.xparcade.tvkiosk.ui.theme.XpDarkGray
 import com.xparcade.tvkiosk.ui.theme.XpMagenta
@@ -62,7 +59,7 @@ fun NeonBackground(modifier: Modifier = Modifier, content: @Composable () -> Uni
                 brush = Brush.linearGradient(
                     colors = listOf(
                         Color(0xFF050505),
-                        Color(0xFF0A0D14),
+                        Color(0xFF070707),
                         Color(0xFF050505)
                     )
                 )
@@ -73,9 +70,9 @@ fun NeonBackground(modifier: Modifier = Modifier, content: @Composable () -> Uni
                 .fillMaxSize()
                 .background(
                     brush = Brush.radialGradient(
-                        colors = listOf(Color(0x66FF005C), Color.Transparent),
-                        center = Offset(1480f, 170f),
-                        radius = 980f
+                        colors = listOf(Color(0x22FF005C), Color.Transparent),
+                        center = Offset(1420f, 180f),
+                        radius = 920f
                     )
                 )
         )
@@ -84,9 +81,9 @@ fun NeonBackground(modifier: Modifier = Modifier, content: @Composable () -> Uni
                 .fillMaxSize()
                 .background(
                     brush = Brush.radialGradient(
-                        colors = listOf(Color(0x40FFD000), Color.Transparent),
-                        center = Offset(220f, 1020f),
-                        radius = 900f
+                        colors = listOf(Color(0x1EFFFFFF), Color.Transparent),
+                        center = Offset(240f, 960f),
+                        radius = 860f
                     )
                 )
         )
@@ -141,27 +138,7 @@ private fun HeroPanel(modifier: Modifier = Modifier, content: @Composable () -> 
 }
 
 @Composable
-fun LockScreen(
-    stationName: String,
-    durationMinutes: Int,
-    amount: Double,
-    unlockMode: String,
-    backendOnline: Boolean,
-    waitingMessage: String,
-    lastPaymentSummary: String?
-) {
-    val waitingAlreadyMentionsOffline = waitingMessage.contains("Sem conexao", ignoreCase = true)
-    val modeTag = when (UnlockMode.normalize(unlockMode)) {
-        UnlockMode.PDV_ONLY -> "OPERACAO VIA PDV"
-        UnlockMode.HYBRID -> "PDV + PIX"
-        else -> "PIX AUTOMATICO"
-    }
-    val modeHeadline = when (UnlockMode.normalize(unlockMode)) {
-        UnlockMode.PDV_ONLY -> "Venda no caixa libera automaticamente"
-        UnlockMode.HYBRID -> "Pague na TV ou no caixa"
-        else -> "Escaneie e jogue sem atendente"
-    }
-
+fun LockScreen(stationName: String, backendOnline: Boolean, waitingMessage: String, lastPaymentSummary: String?) {
     NeonBackground {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -178,141 +155,57 @@ fun LockScreen(
             Spacer(modifier = Modifier.height(6.dp))
             StationBadge(stationName = stationName)
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(28.dp))
             Text(
-                text = modeTag,
+                text = "COMO JOGAR",
                 color = Color(0xFFC8CBD3),
-                fontSize = 15.sp,
-                letterSpacing = 3.sp
+                fontSize = 14.sp,
+                letterSpacing = 2.8.sp
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = modeHeadline,
+                text = "Para jogar aqui é necessário ir até o caixa realizar o pagamento.",
                 color = XpWhite,
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Bold
+                fontSize = 34.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                lineHeight = 42.sp
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(26.dp))
 
             HeroPanel(modifier = Modifier.fillMaxWidth(0.76f)) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalAlignment = Alignment.Start,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text(
-                        text = "PLANO EXPRESS",
+                        text = "PASSO A PASSO",
                         color = Color(0xFF9EA5B2),
                         fontSize = 14.sp,
                         letterSpacing = 2.2.sp
                     )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text("$durationMinutes MIN", color = XpYellow, fontSize = 68.sp, fontWeight = FontWeight.Black)
-                    Text("R$ ${"%.2f".format(amount)}", color = XpWhite, fontSize = 30.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Text("1. Vá até o caixa.", color = XpWhite, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+                    Text("2. Informe a estação ${stationName.uppercase()}.", color = XpWhite, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+                    Text("3. Após o pagamento, a liberação será automática.", color = XpWhite, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+
+                    Spacer(modifier = Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(color = XpMagenta, strokeWidth = 3.dp, modifier = Modifier.size(30.dp))
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(waitingMessage, color = XpWhite, fontSize = 19.sp)
-                    }
-                    if (!waitingAlreadyMentionsOffline) {
-                        Spacer(modifier = Modifier.height(12.dp))
+                        CircularProgressIndicator(color = XpMagenta, strokeWidth = 3.dp, modifier = Modifier.size(26.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            if (backendOnline) "Backend online - gerando QR em tempo real" else "Sem conexao - tentando reconectar",
-                            color = if (backendOnline) Color(0xFFADB5C6) else XpMagenta,
-                            fontSize = 14.sp,
-                            textAlign = TextAlign.Center
+                            text = if (backendOnline) waitingMessage else "Sem conexão com servidor. Chame um atendente.",
+                            color = if (backendOnline) Color(0xFFDDE2ED) else XpMagenta,
+                            fontSize = 18.sp
                         )
                     }
                 }
             }
 
             if (!lastPaymentSummary.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
                 Text(lastPaymentSummary, color = Color(0xFF8E95A3), fontSize = 13.sp)
-            }
-        }
-    }
-}
-
-@Composable
-fun PaymentScreen(
-    stationName: String,
-    payment: CreatePaymentResponse,
-    waitingMessage: String
-) {
-    NeonBackground {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Image(
-                        painter = painterResource(id = R.drawable.xp_logo_transparent),
-                        contentDescription = "XP Arcade Logo",
-                        modifier = Modifier.height(76.dp)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    StationBadge(stationName = stationName)
-                }
-                Text("PIX LIVE", color = XpWhite, fontSize = 20.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
-            }
-
-            Spacer(modifier = Modifier.height(18.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(24.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                HeroPanel(modifier = Modifier.weight(0.42f)) {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("PAGAMENTO PIX", color = Color(0xFF9EA5B2), fontSize = 14.sp, letterSpacing = 2.2.sp)
-                        Text("Liberacao instantanea", color = XpWhite, fontSize = 34.sp, fontWeight = FontWeight.Bold, lineHeight = 38.sp)
-                        Text(
-                            "${payment.durationMinutes} MIN  •  R$ ${"%.2f".format(payment.amount)}",
-                            color = XpYellow,
-                            fontSize = 30.sp,
-                            fontWeight = FontWeight.Black
-                        )
-                        Text(
-                            "Escaneie o QR Code no app do seu banco. Pagou, liberou automaticamente.",
-                            color = Color(0xFFB6BECD),
-                            fontSize = 16.sp,
-                            lineHeight = 21.sp
-                        )
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(Color(0x66101319), RoundedCornerShape(16.dp))
-                                .border(1.dp, Color(0x55FFD000), RoundedCornerShape(16.dp))
-                                .padding(horizontal = 16.dp, vertical = 12.dp)
-                        ) {
-                            Text(waitingMessage, color = XpWhite, fontSize = 15.sp)
-                        }
-                    }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .weight(0.58f)
-                        .background(Color(0xCC0D1117), RoundedCornerShape(30.dp))
-                        .border(1.dp, Color(0x88FF005C), RoundedCornerShape(30.dp))
-                        .padding(18.dp)
-                ) {
-                    QrCodePanel(qrCodeDataUrl = payment.qrCode, modifier = Modifier.fillMaxWidth())
-                }
-            }
-
-            HeroPanel(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = payment.pixCopiaECola.take(130) + if (payment.pixCopiaECola.length > 130) "..." else "",
-                    color = Color(0xFFA4ADBD),
-                    fontSize = 13.sp,
-                    maxLines = 1
-                )
             }
         }
     }
@@ -403,7 +296,6 @@ fun AdminDialog(
     var backendUrl by remember { mutableStateOf(currentConfig.backendUrl) }
     var adminPin by remember { mutableStateOf(currentConfig.adminPin) }
     var adminApiKey by remember { mutableStateOf(currentConfig.adminApiKey) }
-    var unlockMode by remember { mutableStateOf(UnlockMode.normalize(currentConfig.unlockMode)) }
     var autoStartApp by remember { mutableStateOf(currentConfig.autoStartApp) }
     var price20 by remember { mutableStateOf(currentConfig.price20.toString()) }
     var customEnabled by remember { mutableStateOf(currentConfig.customEnabled) }
@@ -423,7 +315,7 @@ fun AdminDialog(
                     backendUrl = backendUrl,
                     adminPin = adminPin,
                     adminApiKey = adminApiKey,
-                    unlockMode = UnlockMode.normalize(unlockMode),
+                    unlockMode = UnlockMode.PDV_ONLY,
                     autoStartApp = autoStartApp,
                     price20 = price20.toDoubleOrNull() ?: currentConfig.price20,
                     customEnabled = customEnabled,
@@ -453,37 +345,6 @@ fun AdminDialog(
                 OutlinedTextField(value = backendUrl, onValueChange = { backendUrl = it }, label = { Text("Backend URL") })
                 OutlinedTextField(value = adminApiKey, onValueChange = { adminApiKey = it }, label = { Text("Admin API key") })
                 OutlinedTextField(value = adminPin, onValueChange = { adminPin = it }, label = { Text("PIN admin") })
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Modo de liberacao", color = XpWhite)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    Button(
-                        onClick = { unlockMode = UnlockMode.PIX_ONLY },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (unlockMode == UnlockMode.PIX_ONLY) XpYellow else XpBlack,
-                            contentColor = if (unlockMode == UnlockMode.PIX_ONLY) XpBlack else XpWhite
-                        )
-                    ) {
-                        Text("PIX")
-                    }
-                    Button(
-                        onClick = { unlockMode = UnlockMode.PDV_ONLY },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (unlockMode == UnlockMode.PDV_ONLY) XpYellow else XpBlack,
-                            contentColor = if (unlockMode == UnlockMode.PDV_ONLY) XpBlack else XpWhite
-                        )
-                    ) {
-                        Text("PDV")
-                    }
-                    Button(
-                        onClick = { unlockMode = UnlockMode.HYBRID },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (unlockMode == UnlockMode.HYBRID) XpYellow else XpBlack,
-                            contentColor = if (unlockMode == UnlockMode.HYBRID) XpBlack else XpWhite
-                        )
-                    ) {
-                        Text("Hibrido")
-                    }
-                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Iniciar automatico no boot", color = XpWhite)
                     Spacer(modifier = Modifier.width(8.dp))
@@ -518,4 +379,5 @@ fun AdminDialog(
         }
     )
 }
+
 

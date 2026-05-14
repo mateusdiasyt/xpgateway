@@ -1,7 +1,6 @@
 package com.xparcade.tvkiosk.app
 
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -16,7 +15,6 @@ import com.xparcade.tvkiosk.domain.state.AppState
 import com.xparcade.tvkiosk.ui.screens.AdminDialog
 import com.xparcade.tvkiosk.ui.screens.ErrorScreen
 import com.xparcade.tvkiosk.ui.screens.LockScreen
-import com.xparcade.tvkiosk.ui.screens.PaymentScreen
 import com.xparcade.tvkiosk.ui.screens.SessionActiveScreen
 
 @Composable
@@ -24,19 +22,6 @@ fun KioskApp(viewModel: KioskViewModel) {
     val uiState by viewModel.uiState.collectAsState()
 
     when (uiState.appState) {
-        AppState.PAYMENT_PENDING -> {
-            val payment = uiState.payment
-            if (payment != null) {
-                PaymentScreen(
-                    stationName = uiState.stationName,
-                    payment = payment,
-                    waitingMessage = uiState.paymentStatusMessage
-                )
-            } else {
-                CircularProgressIndicator()
-            }
-        }
-
         AppState.SESSION_ACTIVE,
         AppState.SESSION_WARNING,
         AppState.PAYMENT_PAID -> {
@@ -55,12 +40,8 @@ fun KioskApp(viewModel: KioskViewModel) {
         }
 
         else -> {
-            val defaultOption = uiState.pricingOptions.firstOrNull()
             LockScreen(
                 stationName = uiState.stationName,
-                durationMinutes = defaultOption?.durationMinutes ?: 20,
-                amount = defaultOption?.amount ?: 15.0,
-                unlockMode = uiState.unlockMode,
                 backendOnline = uiState.backendOnline,
                 waitingMessage = uiState.paymentStatusMessage,
                 lastPaymentSummary = uiState.lastPaymentSummary,

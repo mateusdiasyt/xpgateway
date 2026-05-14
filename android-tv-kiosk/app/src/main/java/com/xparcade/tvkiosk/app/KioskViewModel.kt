@@ -1,4 +1,4 @@
-package com.xparcade.tvkiosk.app
+﻿package com.xparcade.tvkiosk.app
 
 import android.app.Application
 import android.view.KeyEvent
@@ -31,9 +31,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     val uiState: StateFlow<KioskUiState> = _uiState.asStateFlow()
 
     private var config: AppConfig = AppConfig()
-    private var pollJob: Job? = null
     private var countdownJob: Job? = null
-    private var autoPaymentJob: Job? = null
     private var pdvPollJob: Job? = null
 
     private val secretSequence = listOf(
@@ -71,12 +69,13 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun bootstrap() {
         viewModelScope.launch {
-            config = preferencesRepository.getConfig()
+            config = preferencesRepository.getConfig().copy(unlockMode = UnlockMode.PDV_ONLY)
 
             _uiState.update {
                 it.copy(
                     stationName = config.stationName,
-                    unlockMode = config.unlockMode,
+                    unlockMode = UnlockMode.PDV_ONLY,
+                    paymentStatusMessage = "Aguardando liberacao pelo caixa...",
                     appState = AppState.IDLE
                 )
             }
@@ -102,7 +101,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
-            config = preferencesRepository.getConfig()
+            config = preferencesRepository.getConfig().copy(unlockMode = UnlockMode.PDV_ONLY)
 
             val online = backendRepository.healthCheck(config)
             var pricing = defaultOptions(config)
@@ -119,13 +118,11 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                             isCustom = false
                         )
                     }.filter { it.durationMinutes == fixedDurationMinutes }
-                    lastPayment = backendRepository.getLastPaymentSummary(config)
 
+                    lastPayment = backendRepository.getLastPaymentSummary(config)
                     if (pricing.isEmpty()) {
                         pricing = defaultOptions(config)
                     }
-                }.onFailure {
-                    pricing = defaultOptions(config)
                 }
             }
 
@@ -136,7 +133,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                     pricingOptions = pricing,
                     backendOnline = online,
                     lastPaymentSummary = lastPayment,
-                    unlockMode = config.unlockMode,
+                    unlockMode = UnlockMode.PDV_ONLY,
                     appState = if (it.activeSession != null) it.appState else AppState.SELECTING_TIME
                 )
             }
@@ -176,35 +173,16 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun ensureUnlockFlow() {
-        when (UnlockMode.normalize(config.unlockMode)) {
-            UnlockMode.PDV_ONLY -> {
-                stopAutoPayment()
-                startPdvPolling()
-                _uiState.update {
-                    it.copy(
-                        payment = null,
-                        selectedOption = null,
-                        appState = AppState.SELECTING_TIME,
-                        paymentStatusMessage = "Aguardando liberacao pelo PDV..."
-                    )
-                }
-            }
-
-            UnlockMode.HYBRID -> {
-                startPdvPolling()
-                ensureAutoPayment()
-            }
-
-            else -> {
-                stopPdvPolling()
-                ensureAutoPayment()
-            }
+        startPdvPolling()
+        _uiState.update {
+            it.copy(
+                payment = null,
+                selectedOption = null,
+                unlockMode = UnlockMode.PDV_ONLY,
+                appState = AppState.SELECTING_TIME,
+                paymentStatusMessage = "Aguardando liberacao pelo caixa..."
+            )
         }
-    }
-
-    private fun stopAutoPayment() {
-        autoPaymentJob?.cancel()
-        autoPaymentJob = null
     }
 
     private fun stopPdvPolling() {
@@ -244,24 +222,13 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                             return@launch
                         }
                     } else {
-                        val mode = UnlockMode.normalize(config.unlockMode)
-                        if (mode == UnlockMode.PDV_ONLY || uiState.value.appState != AppState.PAYMENT_PENDING) {
-                            _uiState.update {
-                                it.copy(
-                                    paymentStatusMessage = if (mode == UnlockMode.PDV_ONLY) {
-                                        "Aguardando liberacao pelo PDV..."
-                                    } else {
-                                        it.paymentStatusMessage
-                                    }
-                                )
-                            }
+                        _uiState.update {
+                            it.copy(paymentStatusMessage = "Aguardando liberacao pelo caixa...")
                         }
                     }
                 }.onFailure {
-                    if (UnlockMode.normalize(config.unlockMode) == UnlockMode.PDV_ONLY) {
-                        _uiState.update {
-                            it.copy(paymentStatusMessage = "Sem conexao com backend. Aguardando PDV...")
-                        }
+                    _uiState.update {
+                        it.copy(paymentStatusMessage = "Sem conexao com servidor. Chame um atendente.")
                     }
                 }
 
@@ -270,209 +237,35 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun ensureAutoPayment() {
-        if (UnlockMode.normalize(config.unlockMode) == UnlockMode.PDV_ONLY) return
-
-        val state = uiState.value
-        if (state.activeSession != null) return
-        if (state.appState == AppState.PAYMENT_PENDING && state.payment != null) return
-        if (autoPaymentJob?.isActive == true) return
-
-        autoPaymentJob = viewModelScope.launch {
-            if (!uiState.value.backendOnline) {
-                _uiState.update {
-                    it.copy(
-                        appState = AppState.SELECTING_TIME,
-                        paymentStatusMessage = "Sem conexao. Tentando reconectar..."
-                    )
-                }
-                delay(4000)
-                refreshStationData()
-                return@launch
-            }
-
-            val option = uiState.value.pricingOptions.firstOrNull() ?: fixedOption(config)
-            _uiState.update {
-                it.copy(
-                    isLoading = true,
-                    selectedOption = option,
-                    appState = AppState.SELECTING_TIME,
-                    paymentStatusMessage = "Gerando Pix..."
-                )
-            }
-
-            runCatching {
-                backendRepository.createPayment(config, option.durationMinutes, option.amount)
-            }.onSuccess { payment ->
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        selectedOption = option,
-                        payment = payment,
-                        appState = AppState.PAYMENT_PENDING,
-                        paymentStatusMessage = "Escaneie e pague para liberar automaticamente."
-                    )
-                }
-                startPaymentPolling(payment.sessionId)
-            }.onFailure {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        appState = AppState.SELECTING_TIME,
-                        payment = null,
-                        selectedOption = null,
-                        paymentStatusMessage = "Nao foi possivel gerar o Pix. Tentando novamente..."
-                    )
-                }
-                delay(3500)
-                refreshStationData()
-            }
-        }
-    }
-
     fun onSelectPricing(option: PricingOption) {
-        if (UnlockMode.normalize(config.unlockMode) == UnlockMode.PDV_ONLY) {
-            _uiState.update {
-                it.copy(
-                    appState = AppState.SELECTING_TIME,
-                    paymentStatusMessage = "Modo PDV ativo. Libere a estacao pelo sistema de vendas."
-                )
-            }
-            return
-        }
-
-        viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    isLoading = true,
-                    selectedOption = option,
-                    errorMessage = null
-                )
-            }
-
-            runCatching {
-                backendRepository.createPayment(config, option.durationMinutes, option.amount)
-            }.onSuccess { payment ->
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        selectedOption = option,
-                        payment = payment,
-                        appState = AppState.PAYMENT_PENDING,
-                        paymentStatusMessage = "Aguardando pagamento..."
-                    )
-                }
-                startPaymentPolling(payment.sessionId)
-            }.onFailure { error ->
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        appState = AppState.ERROR,
-                        errorMessage = error.message ?: "Não foi possível gerar o Pix."
-                    )
-                }
-            }
+        _uiState.update {
+            it.copy(
+                selectedOption = option,
+                appState = AppState.SELECTING_TIME,
+                paymentStatusMessage = "Liberacao somente via caixa. Procure o atendente."
+            )
         }
     }
 
     fun cancelPayment() {
-        pollJob?.cancel()
         _uiState.update {
             it.copy(
                 payment = null,
                 selectedOption = null,
                 appState = AppState.SELECTING_TIME,
-                paymentStatusMessage = "Aguardando pagamento..."
+                paymentStatusMessage = "Aguardando liberacao pelo caixa..."
             )
         }
-        ensureUnlockFlow()
     }
 
     fun confirmMockPayment() {
-        val payment = uiState.value.payment ?: return
-
-        viewModelScope.launch {
-            runCatching {
-                backendRepository.confirmMockPayment(config, payment.paymentId)
-            }.onSuccess {
-                _uiState.update { state ->
-                    state.copy(paymentStatusMessage = "Pagamento confirmado. Liberando TV...")
-                }
-            }.onFailure { error ->
-                _uiState.update { state ->
-                    state.copy(paymentStatusMessage = "Falha ao confirmar mock: ${error.message}")
-                }
-            }
-        }
-    }
-
-    private fun startPaymentPolling(sessionId: String) {
-        pollJob?.cancel()
-        pollJob = viewModelScope.launch {
-            while (true) {
-                val result = runCatching {
-                    backendRepository.getSessionStatus(config, sessionId)
-                }
-
-                result.onSuccess { status ->
-                    when (status.status.uppercase()) {
-                        "PENDING" -> {
-                            _uiState.update { it.copy(paymentStatusMessage = "Aguardando pagamento...") }
-                        }
-
-                        "PAID", "ACTIVE" -> {
-                            val expiresAt = parseIsoToMillis(status.expiresAt)
-                                ?: (System.currentTimeMillis() + status.durationMinutes * 60_000L)
-                            val active = ActiveSession(
-                                sessionId = status.sessionId,
-                                expiresAtEpochMillis = expiresAt,
-                                durationMinutes = status.durationMinutes,
-                                source = "payment"
-                            )
-                            activateSession(active)
-                            return@launch
-                        }
-
-                        "EXPIRED", "CANCELLED" -> {
-                            _uiState.update {
-                                it.copy(
-                                    paymentStatusMessage = "Pagamento expirado. Gerando um novo Pix...",
-                                    appState = AppState.SELECTING_TIME,
-                                    payment = null,
-                                    selectedOption = null
-                                )
-                            }
-                            delay(1200)
-                            refreshStationData()
-                            return@launch
-                        }
-
-                        else -> {
-                            _uiState.update {
-                                it.copy(
-                                    paymentStatusMessage = "Status desconhecido: ${status.status}"
-                                )
-                            }
-                        }
-                    }
-                }.onFailure {
-                    _uiState.update {
-                        it.copy(paymentStatusMessage = "Sem conexao. Tentando reconectar...")
-                    }
-                    delay(2000)
-                    refreshStationData()
-                    return@launch
-                }
-
-                delay(4000)
-            }
+        _uiState.update {
+            it.copy(paymentStatusMessage = "Modo caixa ativo.")
         }
     }
 
     private fun activateSession(session: ActiveSession) {
         viewModelScope.launch {
-            pollJob?.cancel()
-            stopAutoPayment()
             stopPdvPolling()
             warningFiveShown = false
             warningOneShown = false
@@ -483,7 +276,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                     appState = AppState.SESSION_ACTIVE,
                     activeSession = session,
                     payment = null,
-                    paymentStatusMessage = "Pagamento aprovado",
+                    paymentStatusMessage = "Sessao ativa via caixa",
                     warningMessage = null
                 )
             }
@@ -588,20 +381,23 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                     activeSession = null,
                     remainingSeconds = 0,
                     warningMessage = null,
-                    appState = AppState.SELECTING_TIME
+                    appState = AppState.SELECTING_TIME,
+                    paymentStatusMessage = "Aguardando liberacao pelo caixa..."
                 )
             }
+            ensureUnlockFlow()
         }
     }
 
     fun saveAdminConfig(newConfig: AppConfig) {
         viewModelScope.launch {
-            preferencesRepository.saveConfig(newConfig)
-            config = newConfig
+            val normalized = newConfig.copy(unlockMode = UnlockMode.PDV_ONLY)
+            preferencesRepository.saveConfig(normalized)
+            config = normalized
             _uiState.update {
                 it.copy(
-                    stationName = newConfig.stationName,
-                    unlockMode = UnlockMode.normalize(newConfig.unlockMode),
+                    stationName = normalized.stationName,
+                    unlockMode = UnlockMode.PDV_ONLY,
                     isAdminDialogVisible = false,
                     appState = if (it.activeSession == null) AppState.SELECTING_TIME else it.appState
                 )
@@ -639,7 +435,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
             }
         } else {
             _uiState.update {
-                it.copy(adminPinError = "PIN inválido")
+                it.copy(adminPinError = "PIN invalido")
             }
         }
     }
@@ -671,4 +467,3 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         return runCatching { Instant.parse(iso).toEpochMilli() }.getOrNull()
     }
 }
-

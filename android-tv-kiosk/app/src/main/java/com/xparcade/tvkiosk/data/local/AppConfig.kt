@@ -3,15 +3,12 @@ package com.xparcade.tvkiosk.data.local
 import com.xparcade.tvkiosk.BuildConfig
 
 object UnlockMode {
-    const val PIX_ONLY = "PIX_ONLY"
     const val PDV_ONLY = "PDV_ONLY"
-    const val HYBRID = "HYBRID"
-
-    private val allowed = setOf(PIX_ONLY, PDV_ONLY, HYBRID)
+    private val allowed = setOf(PDV_ONLY)
 
     fun normalize(raw: String?): String {
-        val candidate = raw?.trim()?.uppercase() ?: HYBRID
-        return if (candidate in allowed) candidate else HYBRID
+        val candidate = raw?.trim()?.uppercase() ?: PDV_ONLY
+        return if (candidate in allowed) candidate else PDV_ONLY
     }
 }
 
@@ -28,5 +25,5 @@ data class AppConfig(
     val customDurationMinutes: Int = 90,
     val customPrice: Double = 35.0,
     val adminApiKey: String = "change-me-admin-key",
-    val unlockMode: String = UnlockMode.HYBRID
+    val unlockMode: String = UnlockMode.PDV_ONLY
 )
