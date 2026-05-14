@@ -217,19 +217,22 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
 
         pdvPollJob = viewModelScope.launch {
             while (true) {
-                val result = runCatching { backendRepository.getLiveSession(config) }
+                val result = runCatching { backendRepository.getTvStatus(config) }
 
-                result.onSuccess { liveSession ->
-                    if (liveSession != null && (liveSession.status.equals("PAID", true) || liveSession.status.equals("ACTIVE", true))) {
-                        val expiresAt = parseIsoToMillis(liveSession.expiresAt)
-                            ?: (System.currentTimeMillis() + liveSession.durationMinutes * 60_000L)
+                result.onSuccess { tvStatus ->
+                    if (tvStatus.status.equals("ACTIVE", true)) {
+                        val serverNow = parseIsoToMillis(tvStatus.serverTime) ?: System.currentTimeMillis()
+                        val unlockedUntil = parseIsoToMillis(tvStatus.unlockedUntil)
+                        val expiresAt = unlockedUntil ?: (serverNow + tvStatus.remainingSeconds.coerceAtLeast(0) * 1000L)
+                        val remaining = ((expiresAt - System.currentTimeMillis()) / 1000L).coerceAtLeast(0)
+                        val durationMinutes = ((remaining + 59) / 60).toInt().coerceAtLeast(1)
 
                         if (expiresAt > System.currentTimeMillis()) {
                             val active = ActiveSession(
-                                sessionId = liveSession.sessionId,
+                                sessionId = tvStatus.saleId ?: "pdv-${System.currentTimeMillis()}",
                                 expiresAtEpochMillis = expiresAt,
-                                durationMinutes = liveSession.durationMinutes,
-                                source = liveSession.source?.lowercase() ?: "pdv"
+                                durationMinutes = durationMinutes,
+                                source = "pdv"
                             )
                             activateSession(active)
                             return@launch

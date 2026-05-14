@@ -5,9 +5,9 @@ import com.xparcade.tvkiosk.data.local.AppConfig
 import com.xparcade.tvkiosk.domain.model.CreatePaymentRequest
 import com.xparcade.tvkiosk.domain.model.CreatePaymentResponse
 import com.xparcade.tvkiosk.domain.model.ForceUnlockRequest
-import com.xparcade.tvkiosk.domain.model.LiveSessionResponse
 import com.xparcade.tvkiosk.domain.model.SessionStatusResponse
 import com.xparcade.tvkiosk.domain.model.StationConfigResponse
+import com.xparcade.tvkiosk.domain.model.TvStatusResponse
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -25,6 +25,11 @@ class BackendRepository {
     private fun normalizeBaseUrl(raw: String): String {
         val trimmed = raw.trim()
         return if (trimmed.endsWith("/")) trimmed else "$trimmed/"
+    }
+
+    private fun resolveDeviceKey(config: AppConfig): String {
+        val candidate = config.deviceKey.trim()
+        return if (candidate.isNotBlank()) candidate else config.stationToken
     }
 
     private fun getApi(baseUrl: String): BackendApiService {
@@ -101,13 +106,11 @@ class BackendRepository {
         )
     }
 
-    suspend fun getLiveSession(config: AppConfig): LiveSessionResponse? {
-        val wrapper = getApi(config.backendUrl).getLiveSession(
+    suspend fun getTvStatus(config: AppConfig): TvStatusResponse {
+        return getApi(config.backendUrl).getTvStatus(
             stationId = config.stationId,
-            stationHeaderId = config.stationId,
-            stationToken = config.stationToken
+            deviceKey = resolveDeviceKey(config)
         )
-        return wrapper.data
     }
 
     suspend fun forceUnlock(config: AppConfig, durationMinutes: Int): Map<String, Any> {

@@ -399,6 +399,7 @@ fun AdminDialog(
     var stationName by remember { mutableStateOf(currentConfig.stationName) }
     var stationId by remember { mutableStateOf(currentConfig.stationId) }
     var stationToken by remember { mutableStateOf(currentConfig.stationToken) }
+    var deviceKey by remember { mutableStateOf(currentConfig.deviceKey) }
     var backendUrl by remember { mutableStateOf(currentConfig.backendUrl) }
     var adminPin by remember { mutableStateOf(currentConfig.adminPin) }
     var adminApiKey by remember { mutableStateOf(currentConfig.adminApiKey) }
@@ -418,6 +419,7 @@ fun AdminDialog(
                     stationName = stationName,
                     stationId = stationId,
                     stationToken = stationToken,
+                    deviceKey = deviceKey,
                     backendUrl = backendUrl,
                     adminPin = adminPin,
                     adminApiKey = adminApiKey,
@@ -447,6 +449,7 @@ fun AdminDialog(
                 OutlinedTextField(value = stationName, onValueChange = { stationName = it }, label = { Text("Nome da estacao") })
                 OutlinedTextField(value = stationId, onValueChange = { stationId = it }, label = { Text("Station ID") })
                 OutlinedTextField(value = stationToken, onValueChange = { stationToken = it }, label = { Text("Station token") })
+                OutlinedTextField(value = deviceKey, onValueChange = { deviceKey = it }, label = { Text("Device key (TV)") })
                 OutlinedTextField(value = backendUrl, onValueChange = { backendUrl = it }, label = { Text("Backend URL") })
                 OutlinedTextField(value = adminApiKey, onValueChange = { adminApiKey = it }, label = { Text("Admin API key") })
                 OutlinedTextField(value = adminPin, onValueChange = { adminPin = it }, label = { Text("PIN admin") })

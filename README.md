@@ -119,7 +119,6 @@ Arquivo exemplo: `backend/.env.example`
 
 - `GET /api/stations/:stationId/config`
 - `GET /api/stations/:stationId/last-payment`
-- `GET /api/stations/:stationId/live-session`
 
 ### Webhooks
 
@@ -135,6 +134,7 @@ Arquivo exemplo: `backend/.env.example`
 ### Integracoes
 
 - `POST /api/integrations/pdv/release`
+- `GET /api/integrations/tv/status?stationId=tv-01`
 
 ## 5. Banco PostgreSQL (Neon)
 
@@ -187,6 +187,7 @@ No app, use o admin local para ajustar:
 - Nome da estacao
 - `stationId`
 - `stationToken`
+- `deviceKey` (chave da TV usada no endpoint `/api/integrations/tv/status`)
 - URL do backend
 - `adminApiKey`
 - Modo de liberacao (`PIX`, `PDV`, `Hibrido`)
@@ -248,11 +249,14 @@ Observacao importante (Vercel):
 Fluxo:
 1. Seu PDV conclui a venda e chama `POST /api/integrations/pdv/release`.
 2. Backend cria uma sessao ativa na estacao com provider `PDV`.
-3. APK em modo `PDV` ou `Hibrido` consulta `GET /api/stations/:stationId/live-session`.
+3. APK em modo `PDV` ou `Hibrido` consulta `GET /api/integrations/tv/status?stationId=...`.
 4. Ao detectar sessao ativa, a TV libera automaticamente.
 
 Headers para integracao do PDV:
 - `x-integration-key: <PDV_INTEGRATION_KEY>`
+
+Headers para consulta da TV:
+- `x-device-key: <DEVICE_KEY_DA_TV>`
 
 Body exemplo:
 ```json
@@ -266,6 +270,19 @@ Body exemplo:
   "paidAt": "2026-05-14T20:10:00Z",
   "operator": "caixa-01",
   "customerId": "cli-998"
+}
+```
+
+Resposta exemplo da TV:
+```json
+{
+  "stationId": "tv-01",
+  "status": "ACTIVE",
+  "saleId": "VEN-20260514-ABC",
+  "planCode": "SIMULADOR-10",
+  "unlockedUntil": "2026-05-14T20:40:00.000Z",
+  "remainingSeconds": 582,
+  "serverTime": "2026-05-14T20:30:18.000Z"
 }
 ```
 

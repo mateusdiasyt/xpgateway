@@ -20,6 +20,7 @@ data class AppConfig(
     val stationId: String = BuildConfig.DEFAULT_STATION_ID,
     val stationName: String = BuildConfig.DEFAULT_STATION_NAME,
     val stationToken: String = BuildConfig.DEFAULT_STATION_TOKEN,
+    val deviceKey: String = BuildConfig.DEFAULT_STATION_TOKEN,
     val adminPin: String = "1234",
     val autoStartApp: Boolean = true,
     val price20: Double = 15.0,

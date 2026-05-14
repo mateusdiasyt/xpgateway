@@ -4,14 +4,15 @@ import com.xparcade.tvkiosk.domain.model.CreatePaymentRequest
 import com.xparcade.tvkiosk.domain.model.CreatePaymentResponse
 import com.xparcade.tvkiosk.domain.model.ForceUnlockRequest
 import com.xparcade.tvkiosk.domain.model.LastPaymentWrapper
-import com.xparcade.tvkiosk.domain.model.LiveSessionWrapper
 import com.xparcade.tvkiosk.domain.model.SessionStatusResponse
 import com.xparcade.tvkiosk.domain.model.StationConfigResponse
+import com.xparcade.tvkiosk.domain.model.TvStatusResponse
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface BackendApiService {
 
@@ -32,12 +33,11 @@ interface BackendApiService {
         @Header("x-station-token") stationToken: String
     ): LastPaymentWrapper
 
-    @GET("/api/stations/{stationId}/live-session")
-    suspend fun getLiveSession(
-        @Path("stationId") stationId: String,
-        @Header("x-station-id") stationHeaderId: String,
-        @Header("x-station-token") stationToken: String
-    ): LiveSessionWrapper
+    @GET("/api/integrations/tv/status")
+    suspend fun getTvStatus(
+        @Query("stationId") stationId: String,
+        @Header("x-device-key") deviceKey: String
+    ): TvStatusResponse
 
     @POST("/api/sessions/create-payment")
     suspend fun createPayment(

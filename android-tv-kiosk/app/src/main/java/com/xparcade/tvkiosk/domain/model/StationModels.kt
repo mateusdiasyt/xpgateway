@@ -26,16 +26,12 @@ data class LastPaymentResponse(
     val stationId: String
 )
 
-data class LiveSessionWrapper(
-    val data: LiveSessionResponse?
-)
-
-data class LiveSessionResponse(
-    val sessionId: String,
+data class TvStatusResponse(
+    val stationId: String,
     val status: String,
-    val durationMinutes: Int,
-    val paidAt: String?,
-    val startedAt: String?,
-    val expiresAt: String?,
-    val source: String?
+    val saleId: String?,
+    val planCode: String?,
+    val unlockedUntil: String?,
+    val remainingSeconds: Long,
+    val serverTime: String
 )

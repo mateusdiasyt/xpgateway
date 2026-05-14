@@ -23,6 +23,7 @@ class PreferencesRepository(private val context: Context) {
         val stationId = stringPreferencesKey("station_id")
         val stationName = stringPreferencesKey("station_name")
         val stationToken = stringPreferencesKey("station_token")
+        val deviceKey = stringPreferencesKey("device_key")
         val adminPin = stringPreferencesKey("admin_pin")
         val adminApiKey = stringPreferencesKey("admin_api_key")
         val unlockMode = stringPreferencesKey("unlock_mode")
@@ -44,6 +45,7 @@ class PreferencesRepository(private val context: Context) {
             stationId = prefs[Keys.stationId] ?: AppConfig().stationId,
             stationName = prefs[Keys.stationName] ?: AppConfig().stationName,
             stationToken = prefs[Keys.stationToken] ?: AppConfig().stationToken,
+            deviceKey = prefs[Keys.deviceKey] ?: AppConfig().deviceKey,
             adminPin = prefs[Keys.adminPin] ?: AppConfig().adminPin,
             autoStartApp = prefs[Keys.autoStartApp] ?: AppConfig().autoStartApp,
             price20 = prefs[Keys.price20] ?: AppConfig().price20,
@@ -63,6 +65,7 @@ class PreferencesRepository(private val context: Context) {
             prefs[Keys.stationId] = config.stationId
             prefs[Keys.stationName] = config.stationName
             prefs[Keys.stationToken] = config.stationToken
+            prefs[Keys.deviceKey] = config.deviceKey
             prefs[Keys.adminPin] = config.adminPin
             prefs[Keys.autoStartApp] = config.autoStartApp
             prefs[Keys.price20] = config.price20
