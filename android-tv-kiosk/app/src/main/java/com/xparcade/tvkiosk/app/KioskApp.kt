@@ -43,7 +43,6 @@ fun KioskApp(viewModel: KioskViewModel) {
         AppState.PAYMENT_PAID -> {
             SessionActiveScreen(
                 stationName = uiState.stationName,
-                remainingText = viewModel.formattedRemainingTime(),
                 warning = uiState.warningMessage
             )
         }

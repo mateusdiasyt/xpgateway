@@ -1,6 +1,7 @@
 ﻿package com.xparcade.tvkiosk.app
 
 import android.app.Application
+import android.content.Intent
 import android.view.KeyEvent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -411,6 +412,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
 
                 if (remainingSeconds <= 0) {
                     preferencesRepository.clearActiveSession()
+                    bringKioskToFront()
                     _uiState.update {
                         it.copy(
                             activeSession = null,
@@ -590,4 +592,17 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun Long?.orZero(): Long = this ?: 0L
+
+    private fun bringKioskToFront() {
+        val context = getApplication<Application>().applicationContext
+        val intent = Intent(context, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+            addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        }
+
+        runCatching {
+            context.startActivity(intent)
+        }
+    }
 }

@@ -5,18 +5,23 @@ import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.xparcade.tvkiosk.domain.state.AppState
 import com.xparcade.tvkiosk.ui.theme.XPArcadeTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
     private val viewModel: KioskViewModel by viewModels()
+    private var backgroundedSessionId: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableImmersiveMode()
+        observeSessionVisibility()
 
         setContent {
             XPArcadeTheme {
@@ -41,6 +46,26 @@ class MainActivity : ComponentActivity() {
             }
         }
         return super.dispatchKeyEvent(event)
+    }
+
+    private fun observeSessionVisibility() {
+        lifecycleScope.launch {
+            viewModel.uiState.collect { state ->
+                val activeSessionId = state.activeSession?.sessionId
+                val shouldReleaseScreen =
+                    state.appState == AppState.SESSION_ACTIVE ||
+                        state.appState == AppState.SESSION_WARNING
+
+                if (shouldReleaseScreen && activeSessionId != null && backgroundedSessionId != activeSessionId) {
+                    backgroundedSessionId = activeSessionId
+                    moveTaskToBack(true)
+                }
+
+                if (!shouldReleaseScreen) {
+                    backgroundedSessionId = null
+                }
+            }
+        }
     }
 
     private fun enableImmersiveMode() {

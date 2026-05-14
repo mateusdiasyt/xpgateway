@@ -33,7 +33,8 @@ Como o PDV identifica a TV:
 4. A venda salva a liberacao dessa estacao no banco do `xp-pdv`.
 5. O APK consulta o status pelo mesmo `stationId`.
 6. Quando o status volta `PREPARING`, a TV mostra 30 segundos de preparo.
-7. Quando o status vira `ACTIVE`, a TV libera ate `unlockedUntil`.
+7. Quando o status vira `ACTIVE`, o APK tenta sair da frente para revelar a entrada HDMI/ultima fonte.
+8. O tempo da sessao fica sendo acompanhado no PDV, na aba `Servicos`.
 
 ## 1. Arquitetura de pastas
 
@@ -59,9 +60,9 @@ Documentacao inicial:
 5. Caixa conclui a venda no PDV e escolhe a estacao da TV.
 6. O `xp-pdv` grava a sessao com 30 segundos de preparacao.
 7. APK recebe `PREPARING` e mostra a contagem 30, 29, 28...
-8. Ao zerar, o APK recebe/ativa `ACTIVE`, salva a sessao localmente e mostra o contador.
+8. Ao zerar, o APK recebe/ativa `ACTIVE`, salva a sessao localmente e tenta ir para o fundo para a HDMI aparecer.
 9. Se a TV reiniciar, o APK recupera a sessao salva no DataStore.
-10. Ao expirar, volta automaticamente para tela de bloqueio.
+10. Ao expirar, tenta voltar automaticamente para tela de bloqueio.
 
 ## 3. Backend (Node + TypeScript)
 
@@ -259,8 +260,9 @@ Em TVs Android comuns, APK de terceiro geralmente nao controla troca de HDMI de 
 
 Estrategia MVP:
 - App como launcher/tela de bloqueio.
-- Sessao ativa mostra "TV liberada" + contador.
-- Operacao HDMI guiada ao usuario no periodo pago.
+- Sessao ativa tenta mandar o app para o fundo para revelar a ultima fonte/HDMI.
+- Se o modelo da TV nao permitir esse retorno automatico, a tela ativa orienta o usuario a trocar para HDMI.
+- O contador operacional fica no PDV.
 - Ao expirar, app retorna ao bloqueio.
 
 ## 11. Backend legado: Mock primeiro, Sicoob depois

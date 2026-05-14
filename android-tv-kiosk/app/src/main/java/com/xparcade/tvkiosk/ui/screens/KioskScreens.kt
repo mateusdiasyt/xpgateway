@@ -341,7 +341,6 @@ fun LockScreen(stationName: String, backendOnline: Boolean, waitingMessage: Stri
 @Composable
 fun SessionActiveScreen(
     stationName: String,
-    remainingText: String,
     warning: String?
 ) {
     NeonBackground {
@@ -352,23 +351,23 @@ fun SessionActiveScreen(
         ) {
             HeroPanel(modifier = Modifier.fillMaxWidth(0.72f)) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                    Text("TV LIBERADA", color = XpYellow, fontSize = 56.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("HDMI LIBERADA", color = XpYellow, fontSize = 56.sp, fontWeight = FontWeight.ExtraBold)
                     Spacer(modifier = Modifier.height(10.dp))
                     StationBadge(stationName = stationName)
                     Spacer(modifier = Modifier.height(20.dp))
-                    Text("Tempo restante", color = Color(0xFFB8C0CF), fontSize = 22.sp)
                     Text(
-                        remainingText,
-                        color = XpWhite,
-                        fontSize = 88.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Black
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "Use o console na HDMI durante este periodo.",
+                        "Jogue pela entrada HDMI. O tempo fica sendo controlado no PDV.",
                         color = Color(0xFFE1E5EF),
-                        fontSize = 20.sp
+                        fontSize = 24.sp,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 31.sp
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Text(
+                        "Se esta tela ainda aparecer, altere a fonte para HDMI pelo controle.",
+                        color = Color(0xFFB8C0CF),
+                        fontSize = 18.sp,
+                        textAlign = TextAlign.Center
                     )
                 }
             }
