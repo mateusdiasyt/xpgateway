@@ -6,6 +6,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.xparcade.tvkiosk.data.local.AppConfig
 import com.xparcade.tvkiosk.data.local.PreferencesRepository
+import com.xparcade.tvkiosk.data.local.StationPreset
+import com.xparcade.tvkiosk.data.local.StationPresets
 import com.xparcade.tvkiosk.data.local.UnlockMode
 import com.xparcade.tvkiosk.data.repository.BackendRepository
 import com.xparcade.tvkiosk.domain.model.ActiveSession
@@ -32,6 +34,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
 
     private var config: AppConfig = AppConfig()
     private var countdownJob: Job? = null
+    private var preparationJob: Job? = null
     private var pdvPollJob: Job? = null
 
     private val secretSequence = listOf(
@@ -71,15 +74,52 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             config = preferencesRepository.getConfig().copy(unlockMode = UnlockMode.PDV_ONLY)
 
+            if (!config.isConfigured) {
+                _uiState.update {
+                    it.copy(
+                        stationName = "XP Arcade",
+                        stationPresets = StationPresets.all,
+                        unlockMode = UnlockMode.PDV_ONLY,
+                        paymentStatusMessage = "Selecione a TV para iniciar.",
+                        appState = AppState.INITIAL_SETUP
+                    )
+                }
+                return@launch
+            }
+
             _uiState.update {
                 it.copy(
                     stationName = config.stationName,
+                    stationPresets = StationPresets.all,
                     unlockMode = UnlockMode.PDV_ONLY,
                     paymentStatusMessage = "Aguardando liberacao pelo caixa...",
                     appState = AppState.IDLE
                 )
             }
 
+            restoreOrResetSession()
+            refreshStationData()
+        }
+    }
+
+    fun selectInitialStation(preset: StationPreset) {
+        viewModelScope.launch {
+            val normalized = config.copy(
+                isConfigured = true,
+                stationId = preset.stationId,
+                stationName = preset.stationName,
+                unlockMode = UnlockMode.PDV_ONLY
+            )
+            preferencesRepository.saveConfig(normalized)
+            config = normalized
+            _uiState.update {
+                it.copy(
+                    stationName = normalized.stationName,
+                    stationPresets = StationPresets.all,
+                    appState = AppState.IDLE,
+                    paymentStatusMessage = "Aguardando liberacao pelo caixa..."
+                )
+            }
             restoreOrResetSession()
             refreshStationData()
         }
@@ -102,6 +142,19 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
             config = preferencesRepository.getConfig().copy(unlockMode = UnlockMode.PDV_ONLY)
+
+            if (!config.isConfigured) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        stationName = "XP Arcade",
+                        stationPresets = StationPresets.all,
+                        appState = AppState.INITIAL_SETUP,
+                        paymentStatusMessage = "Selecione a TV para iniciar."
+                    )
+                }
+                return@launch
+            }
 
             val online = backendRepository.healthCheck(config)
             val pricing = defaultOptions(config)
@@ -170,6 +223,11 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         pdvPollJob = null
     }
 
+    private fun stopPreparationCountdown() {
+        preparationJob?.cancel()
+        preparationJob = null
+    }
+
     private fun startPdvPolling() {
         if (pdvPollJob?.isActive == true) return
 
@@ -178,12 +236,35 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                 val result = runCatching { backendRepository.getTvStatus(config) }
 
                 result.onSuccess { tvStatus ->
+                    val isPreparingStatus = tvStatus.status.equals("PREPARING", true)
                     val isActiveStatus =
                         tvStatus.status.equals("ACTIVE", true) ||
                             tvStatus.status.equals("UNLOCKED", true) ||
                             tvStatus.status.equals("RELEASED", true)
 
-                    if (isActiveStatus) {
+                    if (isPreparingStatus) {
+                        val serverNow = parseIsoToMillis(tvStatus.serverTime) ?: System.currentTimeMillis()
+                        val preparationRemainingMillis = tvStatus.preparationRemainingSeconds
+                            ?.coerceAtLeast(0)
+                            ?.times(1000L)
+                        val serviceStartsAt = preparationRemainingMillis?.let { System.currentTimeMillis() + it }
+                            ?: parseIsoToMillis(tvStatus.serviceStartsAt)
+                            ?: parseIsoToMillis(tvStatus.preparationEndsAt)
+                            ?: (serverNow + tvStatus.preparationRemainingSeconds.orZero().coerceAtLeast(0) * 1000L)
+                        val unlockedUntil = parseIsoToMillis(tvStatus.unlockedUntil)
+                            ?: parseIsoToMillis(tvStatus.releasedUntil)
+
+                        if (unlockedUntil != null && serviceStartsAt > System.currentTimeMillis()) {
+                            startPreparationCountdown(
+                                sessionId = tvStatus.saleId ?: "pdv-${System.currentTimeMillis()}",
+                                startsAtEpochMillis = serviceStartsAt,
+                                expiresAtEpochMillis = unlockedUntil,
+                                durationMinutes = ((unlockedUntil - serviceStartsAt).coerceAtLeast(60_000L) / 60_000L).toInt()
+                                    .coerceAtLeast(1)
+                            )
+                            return@launch
+                        }
+                    } else if (isActiveStatus) {
                         val serverNow = parseIsoToMillis(tvStatus.serverTime) ?: System.currentTimeMillis()
                         val unlockedUntil = parseIsoToMillis(tvStatus.unlockedUntil)
                             ?: parseIsoToMillis(tvStatus.releasedUntil)
@@ -247,6 +328,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     private fun activateSession(session: ActiveSession) {
         viewModelScope.launch {
             stopPdvPolling()
+            stopPreparationCountdown()
             warningFiveShown = false
             warningOneShown = false
             preferencesRepository.saveActiveSession(session)
@@ -255,6 +337,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                 it.copy(
                     appState = AppState.SESSION_ACTIVE,
                     activeSession = session,
+                    preparationRemainingSeconds = 0,
                     payment = null,
                     paymentStatusMessage = "Sessao ativa via caixa",
                     warningMessage = null
@@ -262,6 +345,49 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             startCountdown(session)
+        }
+    }
+
+    private fun startPreparationCountdown(
+        sessionId: String,
+        startsAtEpochMillis: Long,
+        expiresAtEpochMillis: Long,
+        durationMinutes: Int
+    ) {
+        if (uiState.value.appState == AppState.SESSION_PREPARING && preparationJob?.isActive == true) {
+            return
+        }
+
+        preparationJob?.cancel()
+        preparationJob = viewModelScope.launch {
+            stopPdvPolling()
+
+            while (true) {
+                val remaining = ((startsAtEpochMillis - System.currentTimeMillis() + 999L) / 1000L).coerceAtLeast(0)
+
+                _uiState.update {
+                    it.copy(
+                        appState = AppState.SESSION_PREPARING,
+                        preparationRemainingSeconds = remaining,
+                        activeSession = null,
+                        paymentStatusMessage = "Prepare-se para jogar..."
+                    )
+                }
+
+                if (remaining <= 0) {
+                    activateSession(
+                        ActiveSession(
+                            sessionId = sessionId,
+                            expiresAtEpochMillis = expiresAtEpochMillis,
+                            durationMinutes = durationMinutes,
+                            source = "pdv"
+                        )
+                    )
+                    return@launch
+                }
+
+                delay(1000)
+            }
         }
     }
 
@@ -356,10 +482,12 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
             }
             preferencesRepository.clearActiveSession()
             countdownJob?.cancel()
+            stopPreparationCountdown()
             _uiState.update {
                 it.copy(
                     activeSession = null,
                     remainingSeconds = 0,
+                    preparationRemainingSeconds = 0,
                     warningMessage = null,
                     appState = AppState.SELECTING_TIME,
                     paymentStatusMessage = "Aguardando liberacao pelo caixa..."
@@ -371,12 +499,19 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
 
     fun saveAdminConfig(newConfig: AppConfig) {
         viewModelScope.launch {
-            val normalized = newConfig.copy(unlockMode = UnlockMode.PDV_ONLY)
+            val preset = StationPresets.find(newConfig.stationId)
+            val normalized = newConfig.copy(
+                isConfigured = true,
+                stationId = newConfig.stationId.trim().lowercase(),
+                stationName = preset?.stationName ?: newConfig.stationName,
+                unlockMode = UnlockMode.PDV_ONLY
+            )
             preferencesRepository.saveConfig(normalized)
             config = normalized
             _uiState.update {
                 it.copy(
                     stationName = normalized.stationName,
+                    stationPresets = StationPresets.all,
                     unlockMode = UnlockMode.PDV_ONLY,
                     isAdminDialogVisible = false,
                     appState = if (it.activeSession == null) AppState.SELECTING_TIME else it.appState
@@ -428,7 +563,11 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update {
             it.copy(
                 isAdminDialogVisible = false,
-                appState = if (it.activeSession == null) AppState.SELECTING_TIME else AppState.SESSION_ACTIVE
+                appState = when {
+                    !config.isConfigured -> AppState.INITIAL_SETUP
+                    it.activeSession == null -> AppState.SELECTING_TIME
+                    else -> AppState.SESSION_ACTIVE
+                }
             )
         }
     }
@@ -446,4 +585,6 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         if (iso.isNullOrBlank()) return null
         return runCatching { Instant.parse(iso).toEpochMilli() }.getOrNull()
     }
+
+    private fun Long?.orZero(): Long = this ?: 0L
 }

@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.xparcade.tvkiosk.R
 import com.xparcade.tvkiosk.data.local.AppConfig
+import com.xparcade.tvkiosk.data.local.StationPreset
 import com.xparcade.tvkiosk.ui.theme.XpBlack
 import com.xparcade.tvkiosk.ui.theme.XpDarkGray
 import com.xparcade.tvkiosk.ui.theme.XpMagenta
@@ -134,6 +135,132 @@ private fun HeroPanel(modifier: Modifier = Modifier, content: @Composable () -> 
             .padding(horizontal = 34.dp, vertical = 28.dp)
     ) {
         content()
+    }
+}
+
+@Composable
+fun InitialSetupScreen(
+    stationPresets: List<StationPreset>,
+    onSelectStation: (StationPreset) -> Unit
+) {
+    NeonBackground {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.xp_logo_transparent),
+                contentDescription = "XP Arcade Logo",
+                modifier = Modifier
+                    .fillMaxWidth(0.42f)
+                    .height(104.dp)
+            )
+            Spacer(modifier = Modifier.height(22.dp))
+            Text(
+                text = "CONFIGURACAO INICIAL",
+                color = Color(0xFFC8CBD3),
+                fontSize = 15.sp,
+                letterSpacing = 3.sp
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = "Qual TV esta recebendo este APK?",
+                color = XpWhite,
+                fontSize = 38.sp,
+                fontWeight = FontWeight.Black,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(28.dp))
+
+            HeroPanel(modifier = Modifier.fillMaxWidth(0.72f)) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Escolha pelo controle remoto. Esta selecao fica salva nesta TV.",
+                        color = Color(0xFFDDE2ED),
+                        fontSize = 18.sp,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(18.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        stationPresets.forEach { preset ->
+                            Button(
+                                onClick = { onSelectStation(preset) },
+                                colors = ButtonDefaults.buttonColors(containerColor = XpMagenta),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(86.dp)
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        preset.stationName,
+                                        color = XpWhite,
+                                        fontSize = 22.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Text(
+                                        preset.stationId.uppercase(),
+                                        color = Color(0xFFEDEFF5),
+                                        fontSize = 13.sp,
+                                        letterSpacing = 1.4.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PreparationScreen(
+    stationName: String,
+    remainingSeconds: Long
+) {
+    NeonBackground {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            HeroPanel(modifier = Modifier.fillMaxWidth(0.7f)) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    Text("PREPARE-SE", color = XpYellow, fontSize = 56.sp, fontWeight = FontWeight.ExtraBold)
+                    Spacer(modifier = Modifier.height(10.dp))
+                    StationBadge(stationName = stationName)
+                    Spacer(modifier = Modifier.height(18.dp))
+                    Text(
+                        text = "O tempo vendido comeca quando a contagem zerar.",
+                        color = Color(0xFFE1E5EF),
+                        fontSize = 20.sp,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        remainingSeconds.coerceAtLeast(0).toString(),
+                        color = XpWhite,
+                        fontSize = 120.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Black
+                    )
+                    Text(
+                        text = "segundos para sentar e pegar o controle",
+                        color = Color(0xFFB8C0CF),
+                        fontSize = 21.sp
+                    )
+                }
+            }
+        }
     }
 }
 

@@ -13,6 +13,7 @@ object UnlockMode {
 }
 
 data class AppConfig(
+    val isConfigured: Boolean = false,
     val backendUrl: String = BuildConfig.DEFAULT_BACKEND_URL,
     val stationId: String = BuildConfig.DEFAULT_STATION_ID,
     val stationName: String = BuildConfig.DEFAULT_STATION_NAME,
@@ -27,3 +28,19 @@ data class AppConfig(
     val adminApiKey: String = "change-me-admin-key",
     val unlockMode: String = UnlockMode.PDV_ONLY
 )
+
+data class StationPreset(
+    val stationId: String,
+    val stationName: String
+)
+
+object StationPresets {
+    val all = listOf(
+        StationPreset(stationId = "tv-01", stationName = "TV 01 - PS5"),
+        StationPreset(stationId = "tv-02", stationName = "TV 02 - Simulador")
+    )
+
+    fun find(stationId: String): StationPreset? {
+        return all.firstOrNull { it.stationId.equals(stationId, ignoreCase = true) }
+    }
+}

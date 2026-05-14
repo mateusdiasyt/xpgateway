@@ -19,6 +19,7 @@ private val Context.dataStore by preferencesDataStore(name = "xp_tv_kiosk_prefs"
 class PreferencesRepository(private val context: Context) {
 
     private object Keys {
+        val isConfigured = booleanPreferencesKey("is_configured")
         val backendUrl = stringPreferencesKey("backend_url")
         val stationId = stringPreferencesKey("station_id")
         val stationName = stringPreferencesKey("station_name")
@@ -41,6 +42,7 @@ class PreferencesRepository(private val context: Context) {
 
     val configFlow: Flow<AppConfig> = context.dataStore.data.map { prefs ->
         AppConfig(
+            isConfigured = prefs[Keys.isConfigured] ?: AppConfig().isConfigured,
             backendUrl = prefs[Keys.backendUrl] ?: AppConfig().backendUrl,
             stationId = prefs[Keys.stationId] ?: AppConfig().stationId,
             stationName = prefs[Keys.stationName] ?: AppConfig().stationName,
@@ -61,6 +63,7 @@ class PreferencesRepository(private val context: Context) {
 
     suspend fun saveConfig(config: AppConfig) {
         context.dataStore.edit { prefs ->
+            prefs[Keys.isConfigured] = config.isConfigured
             prefs[Keys.backendUrl] = config.backendUrl
             prefs[Keys.stationId] = config.stationId
             prefs[Keys.stationName] = config.stationName

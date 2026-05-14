@@ -3,6 +3,7 @@ package com.xparcade.tvkiosk.domain.state
 import com.xparcade.tvkiosk.domain.model.ActiveSession
 import com.xparcade.tvkiosk.domain.model.CreatePaymentResponse
 import com.xparcade.tvkiosk.domain.model.PricingOption
+import com.xparcade.tvkiosk.data.local.StationPreset
 
 data class KioskUiState(
     val appState: AppState = AppState.IDLE,
@@ -12,6 +13,8 @@ data class KioskUiState(
     val payment: CreatePaymentResponse? = null,
     val activeSession: ActiveSession? = null,
     val remainingSeconds: Long = 0,
+    val preparationRemainingSeconds: Long = 0,
+    val stationPresets: List<StationPreset> = emptyList(),
     val warningMessage: String? = null,
     val paymentStatusMessage: String = "Aguardando liberacao pelo caixa...",
     val errorMessage: String? = null,

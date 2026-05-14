@@ -14,7 +14,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import com.xparcade.tvkiosk.domain.state.AppState
 import com.xparcade.tvkiosk.ui.screens.AdminDialog
 import com.xparcade.tvkiosk.ui.screens.ErrorScreen
+import com.xparcade.tvkiosk.ui.screens.InitialSetupScreen
 import com.xparcade.tvkiosk.ui.screens.LockScreen
+import com.xparcade.tvkiosk.ui.screens.PreparationScreen
 import com.xparcade.tvkiosk.ui.screens.SessionActiveScreen
 
 @Composable
@@ -22,6 +24,20 @@ fun KioskApp(viewModel: KioskViewModel) {
     val uiState by viewModel.uiState.collectAsState()
 
     when (uiState.appState) {
+        AppState.INITIAL_SETUP -> {
+            InitialSetupScreen(
+                stationPresets = uiState.stationPresets,
+                onSelectStation = { viewModel.selectInitialStation(it) }
+            )
+        }
+
+        AppState.SESSION_PREPARING -> {
+            PreparationScreen(
+                stationName = uiState.stationName,
+                remainingSeconds = uiState.preparationRemainingSeconds
+            )
+        }
+
         AppState.SESSION_ACTIVE,
         AppState.SESSION_WARNING,
         AppState.PAYMENT_PAID -> {

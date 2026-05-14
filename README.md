@@ -27,11 +27,13 @@ tv-02 = TV 02 - Simulador
 
 Como o PDV identifica a TV:
 
-1. Cada APK fica configurado com um `stationId` fixo.
-2. No PDV, ao vender um produto Gameplay, o operador escolhe a estacao, por exemplo `tv-01`.
-3. A venda salva a liberacao dessa estacao no banco do `xp-pdv`.
-4. O APK dessa TV consulta o status pelo mesmo `stationId`.
-5. Quando o status volta `ACTIVE`, a TV libera ate `unlockedUntil`.
+1. Na primeira abertura do APK, selecione `TV 01 - PS5` ou `TV 02 - Simulador`.
+2. O APK salva localmente o `stationId` escolhido.
+3. No PDV, ao vender um produto Gameplay, o operador escolhe a mesma estacao.
+4. A venda salva a liberacao dessa estacao no banco do `xp-pdv`.
+5. O APK consulta o status pelo mesmo `stationId`.
+6. Quando o status volta `PREPARING`, a TV mostra 30 segundos de preparo.
+7. Quando o status vira `ACTIVE`, a TV libera ate `unlockedUntil`.
 
 ## 1. Arquitetura de pastas
 
@@ -51,13 +53,15 @@ Documentacao inicial:
 ## 2. Fluxo tecnico
 
 1. TV inicia -> app abre em modo fullscreen.
-2. APK fica bloqueado aguardando liberacao do caixa.
-3. APK consulta o `xp-pdv`: `GET /api/integrations/tv/status?stationId=...`.
-4. Caixa conclui a venda no PDV e escolhe a estacao da TV.
-5. O `xp-pdv` grava a sessao de gameplay liberada.
-6. APK recebe `ACTIVE`, salva a sessao localmente e mostra o contador.
-7. Se a TV reiniciar, o APK recupera a sessao salva no DataStore.
-8. Ao expirar, volta automaticamente para tela de bloqueio.
+2. Se for a primeira abertura, o APK pede para escolher qual TV esta sendo configurada.
+3. APK fica bloqueado aguardando liberacao do caixa.
+4. APK consulta o `xp-pdv`: `GET /api/integrations/tv/status?stationId=...`.
+5. Caixa conclui a venda no PDV e escolhe a estacao da TV.
+6. O `xp-pdv` grava a sessao com 30 segundos de preparacao.
+7. APK recebe `PREPARING` e mostra a contagem 30, 29, 28...
+8. Ao zerar, o APK recebe/ativa `ACTIVE`, salva a sessao localmente e mostra o contador.
+9. Se a TV reiniciar, o APK recupera a sessao salva no DataStore.
+10. Ao expirar, volta automaticamente para tela de bloqueio.
 
 ## 3. Backend (Node + TypeScript)
 
@@ -208,7 +212,14 @@ cd android-tv-kiosk
 
 ## 8. Configuracao inicial na TV
 
-No app, use o admin local para ajustar:
+Na primeira abertura, o app mostra duas opcoes prontas:
+
+- `TV 01 - PS5`
+- `TV 02 - Simulador`
+
+Selecione pelo controle remoto. Essa escolha fica salva na propria TV.
+
+No app, use o admin local apenas se precisar ajustar:
 - Nome da estacao
 - `stationId`
 - `deviceKey` (chave da TV usada no endpoint `/api/integrations/tv/status`)

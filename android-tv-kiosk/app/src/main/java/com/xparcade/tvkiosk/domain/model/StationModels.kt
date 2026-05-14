@@ -33,6 +33,9 @@ data class TvStatusResponse(
     val planCode: String?,
     val unlockedUntil: String?,
     val releasedUntil: String?,
+    val serviceStartsAt: String?,
+    val preparationEndsAt: String?,
+    val preparationRemainingSeconds: Long?,
     val remainingSeconds: Long,
     val serverTime: String
 )
