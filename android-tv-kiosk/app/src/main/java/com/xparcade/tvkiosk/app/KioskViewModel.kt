@@ -1,5 +1,6 @@
 ﻿package com.xparcade.tvkiosk.app
 
+import android.app.ActivityManager
 import android.app.Application
 import android.content.Intent
 import android.view.KeyEvent
@@ -677,8 +678,15 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         val context = getApplication<Application>().applicationContext
         val intent = Intent(context, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+            addFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
             addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        }
+
+        runCatching {
+            val activityManager = context.getSystemService(ActivityManager::class.java)
+            activityManager?.appTasks?.firstOrNull()?.moveToFront()
         }
 
         runCatching {
