@@ -1,6 +1,7 @@
 package com.xparcade.tvkiosk.data.repository
 
 import com.xparcade.tvkiosk.data.api.BackendApiService
+import com.xparcade.tvkiosk.BuildConfig
 import com.xparcade.tvkiosk.data.local.AppConfig
 import com.xparcade.tvkiosk.domain.model.CreatePaymentRequest
 import com.xparcade.tvkiosk.domain.model.CreatePaymentResponse
@@ -12,6 +13,7 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.HttpException
 import java.util.concurrent.TimeUnit
 
 class BackendRepository {
@@ -107,10 +109,29 @@ class BackendRepository {
     }
 
     suspend fun getTvStatus(config: AppConfig): TvStatusResponse {
-        return getApi(config.backendUrl).getTvStatus(
-            stationId = config.stationId,
-            deviceKey = resolveDeviceKey(config)
-        )
+        val api = getApi(config.backendUrl)
+        val configuredDeviceKey = resolveDeviceKey(config)
+
+        return runCatching {
+            api.getTvStatus(
+                stationId = config.stationId,
+                deviceKey = configuredDeviceKey
+            )
+        }.recoverCatching { error ->
+            val defaultDeviceKey = BuildConfig.DEFAULT_DEVICE_KEY
+            val shouldRetryWithBundledKey =
+                configuredDeviceKey != defaultDeviceKey &&
+                    (error !is HttpException || error.code() == 401 || error.code() == 403)
+
+            if (!shouldRetryWithBundledKey) {
+                throw error
+            }
+
+            api.getTvStatus(
+                stationId = config.stationId,
+                deviceKey = defaultDeviceKey
+            )
+        }.getOrThrow()
     }
 
     suspend fun forceUnlock(config: AppConfig, durationMinutes: Int): Map<String, Any> {

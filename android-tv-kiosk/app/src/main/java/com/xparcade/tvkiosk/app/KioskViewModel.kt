@@ -279,15 +279,20 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                             )
                             activateSession(active)
                             return@launch
+                        } else {
+                            _uiState.update {
+                                it.copy(paymentStatusMessage = "PDV retornou ACTIVE, mas o tempo ja esta zerado.")
+                            }
                         }
                     } else {
                         _uiState.update {
-                            it.copy(paymentStatusMessage = "Aguardando liberacao pelo caixa...")
+                            it.copy(paymentStatusMessage = "Status PDV: ${tvStatus.status}. Aguardando liberacao pelo caixa...")
                         }
                     }
                 }.onFailure {
+                    val message = it.message?.takeIf { text -> text.isNotBlank() } ?: it::class.java.simpleName
                     _uiState.update {
-                        it.copy(paymentStatusMessage = "Sem conexao com servidor. Chame um atendente.")
+                        it.copy(paymentStatusMessage = "Falha ao consultar PDV: $message. Chame um atendente.")
                     }
                 }
 
