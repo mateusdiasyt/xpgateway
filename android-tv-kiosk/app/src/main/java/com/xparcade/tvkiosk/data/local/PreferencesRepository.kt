@@ -25,6 +25,7 @@ class PreferencesRepository(private val context: Context) {
         val stationToken = stringPreferencesKey("station_token")
         val adminPin = stringPreferencesKey("admin_pin")
         val adminApiKey = stringPreferencesKey("admin_api_key")
+        val unlockMode = stringPreferencesKey("unlock_mode")
         val autoStartApp = booleanPreferencesKey("auto_start_app")
         val price20 = doublePreferencesKey("price_20")
         val customEnabled = booleanPreferencesKey("custom_enabled")
@@ -49,7 +50,8 @@ class PreferencesRepository(private val context: Context) {
             customEnabled = prefs[Keys.customEnabled] ?: AppConfig().customEnabled,
             customDurationMinutes = prefs[Keys.customDuration] ?: AppConfig().customDurationMinutes,
             customPrice = prefs[Keys.customPrice] ?: AppConfig().customPrice,
-            adminApiKey = prefs[Keys.adminApiKey] ?: AppConfig().adminApiKey
+            adminApiKey = prefs[Keys.adminApiKey] ?: AppConfig().adminApiKey,
+            unlockMode = UnlockMode.normalize(prefs[Keys.unlockMode] ?: AppConfig().unlockMode)
         )
     }
 
@@ -68,6 +70,7 @@ class PreferencesRepository(private val context: Context) {
             prefs[Keys.customDuration] = config.customDurationMinutes
             prefs[Keys.customPrice] = config.customPrice
             prefs[Keys.adminApiKey] = config.adminApiKey
+            prefs[Keys.unlockMode] = UnlockMode.normalize(config.unlockMode)
         }
     }
 

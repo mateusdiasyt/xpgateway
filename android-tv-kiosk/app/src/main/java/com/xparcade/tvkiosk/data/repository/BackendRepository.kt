@@ -5,6 +5,7 @@ import com.xparcade.tvkiosk.data.local.AppConfig
 import com.xparcade.tvkiosk.domain.model.CreatePaymentRequest
 import com.xparcade.tvkiosk.domain.model.CreatePaymentResponse
 import com.xparcade.tvkiosk.domain.model.ForceUnlockRequest
+import com.xparcade.tvkiosk.domain.model.LiveSessionResponse
 import com.xparcade.tvkiosk.domain.model.SessionStatusResponse
 import com.xparcade.tvkiosk.domain.model.StationConfigResponse
 import okhttp3.OkHttpClient
@@ -98,6 +99,15 @@ class BackendRepository {
             stationHeaderId = config.stationId,
             stationToken = config.stationToken
         )
+    }
+
+    suspend fun getLiveSession(config: AppConfig): LiveSessionResponse? {
+        val wrapper = getApi(config.backendUrl).getLiveSession(
+            stationId = config.stationId,
+            stationHeaderId = config.stationId,
+            stationToken = config.stationToken
+        )
+        return wrapper.data
     }
 
     suspend fun forceUnlock(config: AppConfig, durationMinutes: Int): Map<String, Any> {

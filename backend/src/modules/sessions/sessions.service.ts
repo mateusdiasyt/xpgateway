@@ -15,6 +15,17 @@ export interface CreateSessionPaymentInput {
   clientAmount?: number;
 }
 
+export interface ReleaseFromPdvInput {
+  saleId: string;
+  stationId: string;
+  durationMinutes: number;
+  amount?: number;
+  paidAt?: Date;
+  operator?: string;
+  planCode?: string;
+  customerId?: string;
+}
+
 export async function getOfficialPrice(stationId: string, durationMinutes: number) {
   const stationSpecific = await prisma.pricingOption.findFirst({
     where: {
@@ -469,6 +480,122 @@ export async function forceUnlockStation(stationId: string, durationMinutes: num
   });
 
   return session;
+}
+
+export async function releaseSessionFromPdv(input: ReleaseFromPdvInput) {
+  const station = await prisma.station.findUnique({ where: { id: input.stationId } });
+  if (!station || !station.isActive) {
+    throw new HttpError(404, "Estacao nao encontrada ou inativa.");
+  }
+
+  const existing = await prisma.payment.findFirst({
+    where: {
+      provider: "PDV",
+      providerPaymentId: input.saleId
+    },
+    include: {
+      session: true
+    }
+  });
+
+  if (existing) {
+    return {
+      ok: true,
+      stationId: input.stationId,
+      sessionId: existing.session.id,
+      status: existing.session.status,
+      expiresAt: existing.session.expiresAt,
+      idempotent: true
+    };
+  }
+
+  const now = new Date();
+  const activeSession = await prisma.session.findFirst({
+    where: {
+      stationId: input.stationId,
+      status: {
+        in: [SessionStatus.PAID, SessionStatus.ACTIVE]
+      },
+      expiresAt: {
+        gt: now
+      }
+    },
+    orderBy: {
+      expiresAt: "desc"
+    }
+  });
+
+  if (activeSession) {
+    throw new HttpError(409, "Ja existe sessao ativa nesta estacao. Aguarde expirar ou encerre manualmente.");
+  }
+
+  const paidAt = input.paidAt && !Number.isNaN(input.paidAt.getTime()) ? input.paidAt : new Date();
+  const expiresAt = addMinutes(paidAt, input.durationMinutes);
+  const amount = Math.max(0, input.amount ?? 0);
+
+  const session = await prisma.$transaction(async (tx) => {
+    const createdSession = await tx.session.create({
+      data: {
+        stationId: input.stationId,
+        durationMinutes: input.durationMinutes,
+        amount: new Prisma.Decimal(amount),
+        status: SessionStatus.ACTIVE,
+        paidAt,
+        startedAt: paidAt,
+        expiresAt
+      }
+    });
+
+    await tx.payment.create({
+      data: {
+        sessionId: createdSession.id,
+        provider: "PDV",
+        providerPaymentId: input.saleId,
+        pixCopiaECola: `PDV:${input.saleId}`,
+        qrCode: "PDV",
+        status: "PAID",
+        rawPayload: {
+          saleId: input.saleId,
+          stationId: input.stationId,
+          durationMinutes: input.durationMinutes,
+          amount,
+          paidAt: paidAt.toISOString(),
+          operator: input.operator ?? null,
+          planCode: input.planCode ?? null,
+          customerId: input.customerId ?? null
+        }
+      }
+    });
+
+    await tx.auditLog.create({
+      data: {
+        stationId: input.stationId,
+        actor: "pdv",
+        action: "PDV_RELEASE_CREATED",
+        payload: {
+          sessionId: createdSession.id,
+          saleId: input.saleId,
+          durationMinutes: input.durationMinutes,
+          amount,
+          expiresAt: expiresAt.toISOString(),
+          operator: input.operator ?? null,
+          planCode: input.planCode ?? null,
+          customerId: input.customerId ?? null
+        }
+      }
+    });
+
+    return createdSession;
+  });
+
+  return {
+    ok: true,
+    stationId: input.stationId,
+    sessionId: session.id,
+    status: session.status,
+    expiresAt,
+    idempotent: false
+  };
 }
 
 export async function endSession(sessionId: string, actor: string) {

@@ -60,6 +60,7 @@ fun KioskApp(viewModel: KioskViewModel) {
                 stationName = uiState.stationName,
                 durationMinutes = defaultOption?.durationMinutes ?: 20,
                 amount = defaultOption?.amount ?: 15.0,
+                unlockMode = uiState.unlockMode,
                 backendOnline = uiState.backendOnline,
                 waitingMessage = uiState.paymentStatusMessage,
                 lastPaymentSummary = uiState.lastPaymentSummary,

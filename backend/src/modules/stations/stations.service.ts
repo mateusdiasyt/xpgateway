@@ -1,6 +1,7 @@
 import { prisma } from "../../db/prisma";
 import { moneyToNumber } from "../../core/money";
 import { HttpError } from "../../core/httpError";
+import { SessionStatus } from "@prisma/client";
 
 const FIXED_PAYMENT_DURATION_MINUTES = 20;
 const FIXED_PAYMENT_AMOUNT = 15.0;
@@ -95,5 +96,56 @@ export async function getLastPaymentByStation(stationId: string) {
     amount: moneyToNumber(payment.session.amount),
     createdAt: payment.createdAt,
     stationId
+  };
+}
+
+export async function getLiveSessionByStation(stationId: string) {
+  const now = new Date();
+
+  await prisma.session.updateMany({
+    where: {
+      stationId,
+      status: {
+        in: [SessionStatus.PAID, SessionStatus.ACTIVE]
+      },
+      expiresAt: {
+        lte: now
+      }
+    },
+    data: {
+      status: SessionStatus.EXPIRED
+    }
+  });
+
+  const session = await prisma.session.findFirst({
+    where: {
+      stationId,
+      status: {
+        in: [SessionStatus.PAID, SessionStatus.ACTIVE]
+      },
+      expiresAt: {
+        gt: now
+      }
+    },
+    include: {
+      payment: true
+    },
+    orderBy: {
+      expiresAt: "desc"
+    }
+  });
+
+  if (!session) {
+    return null;
+  }
+
+  return {
+    sessionId: session.id,
+    status: session.status,
+    durationMinutes: session.durationMinutes,
+    paidAt: session.paidAt,
+    startedAt: session.startedAt,
+    expiresAt: session.expiresAt,
+    source: session.payment?.provider ?? null
   };
 }

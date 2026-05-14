@@ -20,5 +20,6 @@ data class KioskUiState(
     val adminPinError: String? = null,
     val isAdminDialogVisible: Boolean = false,
     val backendOnline: Boolean = true,
-    val lastPaymentSummary: String? = null
+    val lastPaymentSummary: String? = null,
+    val unlockMode: String = "HYBRID"
 )

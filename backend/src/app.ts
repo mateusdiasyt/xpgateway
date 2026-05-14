@@ -7,6 +7,7 @@ import { webhooksRouter } from "./modules/webhooks/webhooks.controller";
 import { adminRouter } from "./modules/admin/admin.controller";
 import { errorHandler } from "./middleware/errorHandler";
 import { stationsRouter } from "./modules/stations/stations.controller";
+import { integrationsRouter } from "./modules/integrations/integrations.controller";
 
 export function buildApp() {
   const app = express();
@@ -44,6 +45,7 @@ export function buildApp() {
   app.use("/api/stations", stationsRouter);
   app.use("/api/webhooks", webhooksRouter);
   app.use("/api/admin", adminRouter);
+  app.use("/api/integrations", integrationsRouter);
 
   app.use(errorHandler);
 

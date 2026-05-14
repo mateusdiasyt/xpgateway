@@ -91,6 +91,7 @@ Arquivo exemplo: `backend/.env.example`
 - `PAYMENT_PROVIDER=MOCK|SICOOB`
 - `STATION_TOKEN_SALT`
 - `ADMIN_API_KEY`
+- `PDV_INTEGRATION_KEY` (autorizacao do sistema de PDV)
 - `SICOOB_CLIENT_ID`, `SICOOB_CLIENT_SECRET`
 - `SICOOB_PIX_KEY` (chave Pix recebedor)
 - `SICOOB_TOKEN_URL` (OAuth client_credentials)
@@ -118,6 +119,7 @@ Arquivo exemplo: `backend/.env.example`
 
 - `GET /api/stations/:stationId/config`
 - `GET /api/stations/:stationId/last-payment`
+- `GET /api/stations/:stationId/live-session`
 
 ### Webhooks
 
@@ -129,6 +131,10 @@ Arquivo exemplo: `backend/.env.example`
 - `POST /api/admin/stations/:stationId/force-unlock`
 - `POST /api/admin/sessions/:sessionId/end`
 - `POST /api/admin/payments/:providerPaymentId/mock-confirm`
+
+### Integracoes
+
+- `POST /api/integrations/pdv/release`
 
 ## 5. Banco PostgreSQL (Neon)
 
@@ -183,6 +189,7 @@ No app, use o admin local para ajustar:
 - `stationToken`
 - URL do backend
 - `adminApiKey`
+- Modo de liberacao (`PIX`, `PDV`, `Hibrido`)
 - PIN admin
 
 Acesso admin por sequencia secreta no controle:
@@ -235,6 +242,32 @@ Observacao importante (Vercel):
 - Vercel nao oferece terminacao mTLS custom para validar certificado cliente do Sicoob.
 - Por isso, neste projeto a liberacao automatica funciona tambem por polling de status no backend (independe de webhook).
 - Se quiser webhook com mTLS estrito, hospede esse endpoint em infraestrutura propria (Nginx/API Gateway) e encaminhe para o backend.
+
+### Integracao PDV (backend + APK)
+
+Fluxo:
+1. Seu PDV conclui a venda e chama `POST /api/integrations/pdv/release`.
+2. Backend cria uma sessao ativa na estacao com provider `PDV`.
+3. APK em modo `PDV` ou `Hibrido` consulta `GET /api/stations/:stationId/live-session`.
+4. Ao detectar sessao ativa, a TV libera automaticamente.
+
+Headers para integracao do PDV:
+- `x-integration-key: <PDV_INTEGRATION_KEY>`
+
+Body exemplo:
+```json
+{
+  "integrationId": "pdv-xp-main",
+  "saleId": "VEN-20260514-00123",
+  "stationId": "tv-01",
+  "planCode": "PS5_20",
+  "durationMinutes": 20,
+  "amount": 15.00,
+  "paidAt": "2026-05-14T20:10:00Z",
+  "operator": "caixa-01",
+  "customerId": "cli-998"
+}
+```
 
 ## 12. Seguranca aplicada
 

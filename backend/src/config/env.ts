@@ -11,6 +11,7 @@ const envSchema = z.object({
   PAYMENT_PROVIDER: z.enum(["MOCK", "SICOOB"]).catch("MOCK"),
   STATION_TOKEN_SALT: z.string().catch("local-dev-salt"),
   ADMIN_API_KEY: z.string().catch("change-me-admin-key"),
+  PDV_INTEGRATION_KEY: z.string().optional(),
   BACKEND_PUBLIC_URL: z.string().catch("http://localhost:8080"),
 
   SICOOB_CLIENT_ID: z.string().optional(),

@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.xparcade.tvkiosk.R
 import com.xparcade.tvkiosk.data.local.AppConfig
+import com.xparcade.tvkiosk.data.local.UnlockMode
 import com.xparcade.tvkiosk.domain.model.CreatePaymentResponse
 import com.xparcade.tvkiosk.ui.components.QrCodePanel
 import com.xparcade.tvkiosk.ui.theme.XpBlack
@@ -144,11 +145,22 @@ fun LockScreen(
     stationName: String,
     durationMinutes: Int,
     amount: Double,
+    unlockMode: String,
     backendOnline: Boolean,
     waitingMessage: String,
     lastPaymentSummary: String?
 ) {
     val waitingAlreadyMentionsOffline = waitingMessage.contains("Sem conexao", ignoreCase = true)
+    val modeTag = when (UnlockMode.normalize(unlockMode)) {
+        UnlockMode.PDV_ONLY -> "OPERACAO VIA PDV"
+        UnlockMode.HYBRID -> "PDV + PIX"
+        else -> "PIX AUTOMATICO"
+    }
+    val modeHeadline = when (UnlockMode.normalize(unlockMode)) {
+        UnlockMode.PDV_ONLY -> "Venda no caixa libera automaticamente"
+        UnlockMode.HYBRID -> "Pague na TV ou no caixa"
+        else -> "Escaneie e jogue sem atendente"
+    }
 
     NeonBackground {
         Column(
@@ -168,14 +180,14 @@ fun LockScreen(
 
             Spacer(modifier = Modifier.height(18.dp))
             Text(
-                text = "PIX AUTOMATICO",
+                text = modeTag,
                 color = Color(0xFFC8CBD3),
                 fontSize = 15.sp,
                 letterSpacing = 3.sp
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Escaneie e jogue sem atendente",
+                text = modeHeadline,
                 color = XpWhite,
                 fontSize = 30.sp,
                 fontWeight = FontWeight.Bold
@@ -390,6 +402,7 @@ fun AdminDialog(
     var backendUrl by remember { mutableStateOf(currentConfig.backendUrl) }
     var adminPin by remember { mutableStateOf(currentConfig.adminPin) }
     var adminApiKey by remember { mutableStateOf(currentConfig.adminApiKey) }
+    var unlockMode by remember { mutableStateOf(UnlockMode.normalize(currentConfig.unlockMode)) }
     var autoStartApp by remember { mutableStateOf(currentConfig.autoStartApp) }
     var price20 by remember { mutableStateOf(currentConfig.price20.toString()) }
     var customEnabled by remember { mutableStateOf(currentConfig.customEnabled) }
@@ -408,6 +421,7 @@ fun AdminDialog(
                     backendUrl = backendUrl,
                     adminPin = adminPin,
                     adminApiKey = adminApiKey,
+                    unlockMode = UnlockMode.normalize(unlockMode),
                     autoStartApp = autoStartApp,
                     price20 = price20.toDoubleOrNull() ?: currentConfig.price20,
                     customEnabled = customEnabled,
@@ -436,6 +450,37 @@ fun AdminDialog(
                 OutlinedTextField(value = backendUrl, onValueChange = { backendUrl = it }, label = { Text("Backend URL") })
                 OutlinedTextField(value = adminApiKey, onValueChange = { adminApiKey = it }, label = { Text("Admin API key") })
                 OutlinedTextField(value = adminPin, onValueChange = { adminPin = it }, label = { Text("PIN admin") })
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Modo de liberacao", color = XpWhite)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    Button(
+                        onClick = { unlockMode = UnlockMode.PIX_ONLY },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (unlockMode == UnlockMode.PIX_ONLY) XpYellow else XpBlack,
+                            contentColor = if (unlockMode == UnlockMode.PIX_ONLY) XpBlack else XpWhite
+                        )
+                    ) {
+                        Text("PIX")
+                    }
+                    Button(
+                        onClick = { unlockMode = UnlockMode.PDV_ONLY },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (unlockMode == UnlockMode.PDV_ONLY) XpYellow else XpBlack,
+                            contentColor = if (unlockMode == UnlockMode.PDV_ONLY) XpBlack else XpWhite
+                        )
+                    ) {
+                        Text("PDV")
+                    }
+                    Button(
+                        onClick = { unlockMode = UnlockMode.HYBRID },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (unlockMode == UnlockMode.HYBRID) XpYellow else XpBlack,
+                            contentColor = if (unlockMode == UnlockMode.HYBRID) XpBlack else XpWhite
+                        )
+                    ) {
+                        Text("Hibrido")
+                    }
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Iniciar automatico no boot", color = XpWhite)
                     Spacer(modifier = Modifier.width(8.dp))

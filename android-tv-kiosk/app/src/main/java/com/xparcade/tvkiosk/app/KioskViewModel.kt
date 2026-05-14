@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.xparcade.tvkiosk.data.local.AppConfig
 import com.xparcade.tvkiosk.data.local.PreferencesRepository
+import com.xparcade.tvkiosk.data.local.UnlockMode
 import com.xparcade.tvkiosk.data.repository.BackendRepository
 import com.xparcade.tvkiosk.domain.model.ActiveSession
 import com.xparcade.tvkiosk.domain.model.PricingOption
@@ -33,6 +34,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     private var pollJob: Job? = null
     private var countdownJob: Job? = null
     private var autoPaymentJob: Job? = null
+    private var pdvPollJob: Job? = null
 
     private val secretSequence = listOf(
         KeyEvent.KEYCODE_DPAD_UP,
@@ -74,6 +76,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update {
                 it.copy(
                     stationName = config.stationName,
+                    unlockMode = config.unlockMode,
                     appState = AppState.IDLE
                 )
             }
@@ -133,12 +136,13 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                     pricingOptions = pricing,
                     backendOnline = online,
                     lastPaymentSummary = lastPayment,
+                    unlockMode = config.unlockMode,
                     appState = if (it.activeSession != null) it.appState else AppState.SELECTING_TIME
                 )
             }
 
             if (uiState.value.activeSession == null) {
-                ensureAutoPayment()
+                ensureUnlockFlow()
             }
         }
     }
@@ -171,7 +175,95 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private fun ensureUnlockFlow() {
+        when (UnlockMode.normalize(config.unlockMode)) {
+            UnlockMode.PDV_ONLY -> {
+                stopAutoPayment()
+                startPdvPolling()
+                _uiState.update {
+                    it.copy(
+                        payment = null,
+                        selectedOption = null,
+                        appState = AppState.SELECTING_TIME,
+                        paymentStatusMessage = "Aguardando liberacao pelo PDV..."
+                    )
+                }
+            }
+
+            UnlockMode.HYBRID -> {
+                startPdvPolling()
+                ensureAutoPayment()
+            }
+
+            else -> {
+                stopPdvPolling()
+                ensureAutoPayment()
+            }
+        }
+    }
+
+    private fun stopAutoPayment() {
+        autoPaymentJob?.cancel()
+        autoPaymentJob = null
+    }
+
+    private fun stopPdvPolling() {
+        pdvPollJob?.cancel()
+        pdvPollJob = null
+    }
+
+    private fun startPdvPolling() {
+        if (pdvPollJob?.isActive == true) return
+
+        pdvPollJob = viewModelScope.launch {
+            while (true) {
+                val result = runCatching { backendRepository.getLiveSession(config) }
+
+                result.onSuccess { liveSession ->
+                    if (liveSession != null && (liveSession.status.equals("PAID", true) || liveSession.status.equals("ACTIVE", true))) {
+                        val expiresAt = parseIsoToMillis(liveSession.expiresAt)
+                            ?: (System.currentTimeMillis() + liveSession.durationMinutes * 60_000L)
+
+                        if (expiresAt > System.currentTimeMillis()) {
+                            val active = ActiveSession(
+                                sessionId = liveSession.sessionId,
+                                expiresAtEpochMillis = expiresAt,
+                                durationMinutes = liveSession.durationMinutes,
+                                source = liveSession.source?.lowercase() ?: "pdv"
+                            )
+                            activateSession(active)
+                            return@launch
+                        }
+                    } else {
+                        val mode = UnlockMode.normalize(config.unlockMode)
+                        if (mode == UnlockMode.PDV_ONLY || uiState.value.appState != AppState.PAYMENT_PENDING) {
+                            _uiState.update {
+                                it.copy(
+                                    paymentStatusMessage = if (mode == UnlockMode.PDV_ONLY) {
+                                        "Aguardando liberacao pelo PDV..."
+                                    } else {
+                                        it.paymentStatusMessage
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }.onFailure {
+                    if (UnlockMode.normalize(config.unlockMode) == UnlockMode.PDV_ONLY) {
+                        _uiState.update {
+                            it.copy(paymentStatusMessage = "Sem conexao com backend. Aguardando PDV...")
+                        }
+                    }
+                }
+
+                delay(3000)
+            }
+        }
+    }
+
     private fun ensureAutoPayment() {
+        if (UnlockMode.normalize(config.unlockMode) == UnlockMode.PDV_ONLY) return
+
         val state = uiState.value
         if (state.activeSession != null) return
         if (state.appState == AppState.PAYMENT_PENDING && state.payment != null) return
@@ -230,6 +322,16 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun onSelectPricing(option: PricingOption) {
+        if (UnlockMode.normalize(config.unlockMode) == UnlockMode.PDV_ONLY) {
+            _uiState.update {
+                it.copy(
+                    appState = AppState.SELECTING_TIME,
+                    paymentStatusMessage = "Modo PDV ativo. Libere a estacao pelo sistema de vendas."
+                )
+            }
+            return
+        }
+
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
@@ -274,6 +376,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                 paymentStatusMessage = "Aguardando pagamento..."
             )
         }
+        ensureUnlockFlow()
     }
 
     fun confirmMockPayment() {
@@ -359,6 +462,9 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun activateSession(session: ActiveSession) {
         viewModelScope.launch {
+            pollJob?.cancel()
+            stopAutoPayment()
+            stopPdvPolling()
             warningFiveShown = false
             warningOneShown = false
             preferencesRepository.saveActiveSession(session)
@@ -486,6 +592,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update {
                 it.copy(
                     stationName = newConfig.stationName,
+                    unlockMode = UnlockMode.normalize(newConfig.unlockMode),
                     isAdminDialogVisible = false,
                     appState = if (it.activeSession == null) AppState.SELECTING_TIME else it.appState
                 )

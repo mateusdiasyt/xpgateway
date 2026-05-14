@@ -25,3 +25,17 @@ data class LastPaymentResponse(
     val createdAt: String,
     val stationId: String
 )
+
+data class LiveSessionWrapper(
+    val data: LiveSessionResponse?
+)
+
+data class LiveSessionResponse(
+    val sessionId: String,
+    val status: String,
+    val durationMinutes: Int,
+    val paidAt: String?,
+    val startedAt: String?,
+    val expiresAt: String?,
+    val source: String?
+)
