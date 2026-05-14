@@ -32,6 +32,7 @@ data class TvStatusResponse(
     val saleId: String?,
     val planCode: String?,
     val unlockedUntil: String?,
+    val releasedUntil: String?,
     val remainingSeconds: Long,
     val serverTime: String
 )

@@ -220,9 +220,15 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                 val result = runCatching { backendRepository.getTvStatus(config) }
 
                 result.onSuccess { tvStatus ->
-                    if (tvStatus.status.equals("ACTIVE", true)) {
+                    val isActiveStatus =
+                        tvStatus.status.equals("ACTIVE", true) ||
+                            tvStatus.status.equals("UNLOCKED", true) ||
+                            tvStatus.status.equals("RELEASED", true)
+
+                    if (isActiveStatus) {
                         val serverNow = parseIsoToMillis(tvStatus.serverTime) ?: System.currentTimeMillis()
                         val unlockedUntil = parseIsoToMillis(tvStatus.unlockedUntil)
+                            ?: parseIsoToMillis(tvStatus.releasedUntil)
                         val expiresAt = unlockedUntil ?: (serverNow + tvStatus.remainingSeconds.coerceAtLeast(0) * 1000L)
                         val remaining = ((expiresAt - System.currentTimeMillis()) / 1000L).coerceAtLeast(0)
                         val durationMinutes = ((remaining + 59) / 60).toInt().coerceAtLeast(1)
