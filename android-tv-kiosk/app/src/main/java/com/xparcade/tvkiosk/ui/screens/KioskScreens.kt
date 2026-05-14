@@ -291,16 +291,10 @@ fun AdminDialog(
 ) {
     var stationName by remember { mutableStateOf(currentConfig.stationName) }
     var stationId by remember { mutableStateOf(currentConfig.stationId) }
-    var stationToken by remember { mutableStateOf(currentConfig.stationToken) }
     var deviceKey by remember { mutableStateOf(currentConfig.deviceKey) }
     var backendUrl by remember { mutableStateOf(currentConfig.backendUrl) }
     var adminPin by remember { mutableStateOf(currentConfig.adminPin) }
-    var adminApiKey by remember { mutableStateOf(currentConfig.adminApiKey) }
     var autoStartApp by remember { mutableStateOf(currentConfig.autoStartApp) }
-    var price20 by remember { mutableStateOf(currentConfig.price20.toString()) }
-    var customEnabled by remember { mutableStateOf(currentConfig.customEnabled) }
-    var customDuration by remember { mutableStateOf(currentConfig.customDurationMinutes.toString()) }
-    var customPrice by remember { mutableStateOf(currentConfig.customPrice.toString()) }
     var forceMinutes by remember { mutableStateOf("30") }
 
     AlertDialog(
@@ -310,17 +304,11 @@ fun AdminDialog(
                 val merged = currentConfig.copy(
                     stationName = stationName,
                     stationId = stationId,
-                    stationToken = stationToken,
                     deviceKey = deviceKey,
                     backendUrl = backendUrl,
                     adminPin = adminPin,
-                    adminApiKey = adminApiKey,
                     unlockMode = "PDV_ONLY",
-                    autoStartApp = autoStartApp,
-                    price20 = price20.toDoubleOrNull() ?: currentConfig.price20,
-                    customEnabled = customEnabled,
-                    customDurationMinutes = customDuration.toIntOrNull() ?: currentConfig.customDurationMinutes,
-                    customPrice = customPrice.toDoubleOrNull() ?: currentConfig.customPrice
+                    autoStartApp = autoStartApp
                 )
                 onSave(merged)
             }) {
@@ -336,40 +324,33 @@ fun AdminDialog(
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Text("Admin local", color = XpYellow, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "Modo PDV: informe a URL do xp-pdv e o codigo desta TV.",
+                    color = XpWhite,
+                    fontSize = 14.sp
+                )
                 Spacer(modifier = Modifier.height(8.dp))
 
+                OutlinedTextField(value = backendUrl, onValueChange = { backendUrl = it }, label = { Text("URL do PDV") })
                 OutlinedTextField(value = stationName, onValueChange = { stationName = it }, label = { Text("Nome da estacao") })
                 OutlinedTextField(value = stationId, onValueChange = { stationId = it }, label = { Text("Station ID") })
-                OutlinedTextField(value = stationToken, onValueChange = { stationToken = it }, label = { Text("Station token") })
                 OutlinedTextField(value = deviceKey, onValueChange = { deviceKey = it }, label = { Text("Device key (TV)") })
-                OutlinedTextField(value = backendUrl, onValueChange = { backendUrl = it }, label = { Text("Backend URL") })
-                OutlinedTextField(value = adminApiKey, onValueChange = { adminApiKey = it }, label = { Text("Admin API key") })
                 OutlinedTextField(value = adminPin, onValueChange = { adminPin = it }, label = { Text("PIN admin") })
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Iniciar automatico no boot", color = XpWhite)
                     Spacer(modifier = Modifier.width(8.dp))
                     Switch(checked = autoStartApp, onCheckedChange = { autoStartApp = it })
                 }
-                OutlinedTextField(value = price20, onValueChange = { price20 = it }, label = { Text("Preco 20 min") })
-
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Tempo personalizado", color = XpWhite)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Switch(checked = customEnabled, onCheckedChange = { customEnabled = it })
-                }
-                OutlinedTextField(value = customDuration, onValueChange = { customDuration = it }, label = { Text("Duracao custom (min)") })
-                OutlinedTextField(value = customPrice, onValueChange = { customPrice = it }, label = { Text("Preco custom") })
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                OutlinedTextField(value = forceMinutes, onValueChange = { forceMinutes = it }, label = { Text("Forcar liberacao (min)") })
+                OutlinedTextField(value = forceMinutes, onValueChange = { forceMinutes = it }, label = { Text("Liberacao local de teste (min)") })
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                     Button(onClick = onTestConnection) {
                         Text("Testar conexao")
                     }
                     Button(onClick = { onForceUnlock(forceMinutes.toIntOrNull() ?: 30) }) {
-                        Text("Forcar liberacao")
+                        Text("Liberar teste")
                     }
                     TextButton(onClick = onEndSession) {
                         Text("Encerrar sessao", color = XpMagenta)

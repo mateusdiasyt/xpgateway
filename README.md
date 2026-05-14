@@ -1,10 +1,37 @@
 ﻿# XP Arcade & Bar - Android TV Kiosk + Pix Backend
 
-Projeto MVP para bloqueio/liberacao de estacoes gamer em Android TV via Pix.
+Projeto MVP para bloqueio/liberacao de estacoes gamer em Android TV integrado ao `xp-pdv`.
 
 - App Android TV nativo em Kotlin + Jetpack Compose (modo kiosk pragmatico)
-- Backend Node.js + TypeScript + Express + Prisma + PostgreSQL (Neon Tech)
-- Provider de pagamento com troca simples entre `MOCK` e `SICOOB`
+- App em modo PDV: a venda acontece no caixa e a TV libera automaticamente pelo `xp-pdv`
+- Backend Node.js + TypeScript + Express + Prisma + PostgreSQL mantido como legado/alternativa futura
+- Provider Pix `MOCK`/`SICOOB` mantido no backend legado, mas nao e usado no fluxo atual do APK
+
+## Modo atual: xp-pdv como backend da TV
+
+O APK agora aponta direto para o PDV:
+
+```text
+Backend URL: https://xp-pdv.vercel.app
+Healthcheck:  GET /api/health
+Polling TV:   GET /api/integrations/tv/status?stationId=tv-01
+Header TV:    x-device-key: <XP_TV_DEVICE_KEY>
+```
+
+Estacoes iniciais:
+
+```text
+tv-01 = TV 01 - PS5
+tv-02 = TV 02 - Simulador
+```
+
+Como o PDV identifica a TV:
+
+1. Cada APK fica configurado com um `stationId` fixo.
+2. No PDV, ao vender um produto Gameplay, o operador escolhe a estacao, por exemplo `tv-01`.
+3. A venda salva a liberacao dessa estacao no banco do `xp-pdv`.
+4. O APK dessa TV consulta o status pelo mesmo `stationId`.
+5. Quando o status volta `ACTIVE`, a TV libera ate `unlockedUntil`.
 
 ## 1. Arquitetura de pastas
 
@@ -24,15 +51,13 @@ Documentacao inicial:
 ## 2. Fluxo tecnico
 
 1. TV inicia -> app abre em modo fullscreen.
-2. TV gera automaticamente Pix de 20 minutos (sem depender de controle).
-3. APK chama backend: `POST /api/sessions/create-payment`.
-4. Backend valida estacao, token, duracao e preco oficial.
-5. Backend cria cobranca no provider ativo (`MOCK` no MVP).
-6. APK exibe QR Pix + copia e cola.
-7. APK faz polling: `GET /api/sessions/:sessionId/status`.
-8. Ao pagamento aprovado, sessao e liberada ate `expiresAt`.
-9. APK mantem contador local persistente (DataStore) e recupera apos reboot.
-10. Ao expirar, volta automaticamente para tela de bloqueio.
+2. APK fica bloqueado aguardando liberacao do caixa.
+3. APK consulta o `xp-pdv`: `GET /api/integrations/tv/status?stationId=...`.
+4. Caixa conclui a venda no PDV e escolhe a estacao da TV.
+5. O `xp-pdv` grava a sessao de gameplay liberada.
+6. APK recebe `ACTIVE`, salva a sessao localmente e mostra o contador.
+7. Se a TV reiniciar, o APK recupera a sessao salva no DataStore.
+8. Ao expirar, volta automaticamente para tela de bloqueio.
 
 ## 3. Backend (Node + TypeScript)
 
@@ -186,12 +211,21 @@ cd android-tv-kiosk
 No app, use o admin local para ajustar:
 - Nome da estacao
 - `stationId`
-- `stationToken`
 - `deviceKey` (chave da TV usada no endpoint `/api/integrations/tv/status`)
-- URL do backend
-- `adminApiKey`
-- Modo de liberacao (`PIX`, `PDV`, `Hibrido`)
+- URL do PDV
 - PIN admin
+
+Valores recomendados:
+
+```text
+TV 01 - PS5
+Backend URL: https://xp-pdv.vercel.app
+stationId: tv-01
+
+TV 02 - Simulador
+Backend URL: https://xp-pdv.vercel.app
+stationId: tv-02
+```
 
 Acesso admin por sequencia secreta no controle:
 - `UP UP DOWN DOWN LEFT RIGHT LEFT RIGHT OK`
@@ -218,9 +252,11 @@ Estrategia MVP:
 - Operacao HDMI guiada ao usuario no periodo pago.
 - Ao expirar, app retorna ao bloqueio.
 
-## 11. Mock primeiro, Sicoob depois
+## 11. Backend legado: Mock primeiro, Sicoob depois
 
-### MVP funcional (agora)
+Esta secao vale apenas se o backend Express separado voltar a ser usado.
+
+### MVP funcional legado
 
 - `PAYMENT_PROVIDER=MOCK`
 - Fluxo automatico: QR de 20 min aparece sem controle remoto

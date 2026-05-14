@@ -104,27 +104,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
             config = preferencesRepository.getConfig().copy(unlockMode = UnlockMode.PDV_ONLY)
 
             val online = backendRepository.healthCheck(config)
-            var pricing = defaultOptions(config)
-            var lastPayment: String? = null
-
-            if (online) {
-                runCatching {
-                    val stationConfig = backendRepository.getStationConfig(config)
-                    pricing = stationConfig.pricingOptions.map {
-                        PricingOption(
-                            label = it.label,
-                            durationMinutes = it.durationMinutes,
-                            amount = it.amount,
-                            isCustom = false
-                        )
-                    }.filter { it.durationMinutes == fixedDurationMinutes }
-
-                    lastPayment = backendRepository.getLastPaymentSummary(config)
-                    if (pricing.isEmpty()) {
-                        pricing = defaultOptions(config)
-                    }
-                }
-            }
+            val pricing = defaultOptions(config)
 
             _uiState.update {
                 it.copy(
@@ -132,7 +112,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                     stationName = config.stationName,
                     pricingOptions = pricing,
                     backendOnline = online,
-                    lastPaymentSummary = lastPayment,
+                    lastPaymentSummary = null,
                     unlockMode = UnlockMode.PDV_ONLY,
                     appState = if (it.activeSession != null) it.appState else AppState.SELECTING_TIME
                 )

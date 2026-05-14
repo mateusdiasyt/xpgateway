@@ -16,7 +16,7 @@ import retrofit2.http.Query
 
 interface BackendApiService {
 
-    @GET("/health")
+    @GET("/api/health")
     suspend fun healthCheck(): Map<String, Any>
 
     @GET("/api/stations/{stationId}/config")
