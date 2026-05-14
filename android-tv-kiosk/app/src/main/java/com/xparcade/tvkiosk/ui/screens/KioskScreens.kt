@@ -315,7 +315,7 @@ fun AdminDialog(
                     backendUrl = backendUrl,
                     adminPin = adminPin,
                     adminApiKey = adminApiKey,
-                    unlockMode = UnlockMode.PDV_ONLY,
+                    unlockMode = "PDV_ONLY",
                     autoStartApp = autoStartApp,
                     price20 = price20.toDoubleOrNull() ?: currentConfig.price20,
                     customEnabled = customEnabled,
