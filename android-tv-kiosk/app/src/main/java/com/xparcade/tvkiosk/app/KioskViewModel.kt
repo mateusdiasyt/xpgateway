@@ -3,6 +3,7 @@
 import android.app.ActivityManager
 import android.app.Application
 import android.content.Intent
+import android.os.Build
 import android.view.KeyEvent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -16,6 +17,7 @@ import com.xparcade.tvkiosk.domain.model.ActiveSession
 import com.xparcade.tvkiosk.domain.model.PricingOption
 import com.xparcade.tvkiosk.domain.state.AppState
 import com.xparcade.tvkiosk.domain.state.KioskUiState
+import com.xparcade.tvkiosk.service.SessionGuardService
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -358,9 +360,33 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
 
             startCountdown(session)
             if (session.source == "pdv") {
+                startSessionGuard(session)
                 startActiveSessionMonitor(session)
             }
         }
+    }
+
+    private fun startSessionGuard(session: ActiveSession) {
+        val context = getApplication<Application>().applicationContext
+        val intent = Intent(context, SessionGuardService::class.java).apply {
+            putExtra(SessionGuardService.EXTRA_EXPIRES_AT, session.expiresAtEpochMillis)
+            putExtra(SessionGuardService.EXTRA_BACKEND_URL, config.backendUrl)
+            putExtra(SessionGuardService.EXTRA_STATION_ID, config.stationId)
+            putExtra(SessionGuardService.EXTRA_STATION_NAME, config.stationName)
+            putExtra(SessionGuardService.EXTRA_STATION_TOKEN, config.stationToken)
+            putExtra(SessionGuardService.EXTRA_DEVICE_KEY, config.deviceKey)
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(intent)
+        } else {
+            context.startService(intent)
+        }
+    }
+
+    private fun stopSessionGuard() {
+        val context = getApplication<Application>().applicationContext
+        context.stopService(Intent(context, SessionGuardService::class.java))
     }
 
     private fun startActiveSessionMonitor(session: ActiveSession) {
@@ -413,6 +439,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
 
     private suspend fun handleRemoteSessionEnded(message: String) {
         activeMonitorJob = null
+        stopSessionGuard()
         preferencesRepository.clearActiveSession()
         countdownJob?.cancel()
         stopPreparationCountdown()
@@ -491,6 +518,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
 
                 if (remainingSeconds <= 0) {
                     preferencesRepository.clearActiveSession()
+                    stopSessionGuard()
                     stopActiveSessionMonitor()
                     bringKioskToFront()
                     _uiState.update {
@@ -566,6 +594,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                 backendRepository.endSession(config, active.sessionId)
             }
             preferencesRepository.clearActiveSession()
+            stopSessionGuard()
             countdownJob?.cancel()
             stopPreparationCountdown()
             stopActiveSessionMonitor()
