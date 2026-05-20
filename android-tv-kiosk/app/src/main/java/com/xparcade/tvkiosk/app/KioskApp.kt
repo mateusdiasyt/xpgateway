@@ -31,6 +31,7 @@ fun KioskApp(viewModel: KioskViewModel) {
                 launcherStatusMessage = uiState.launcherStatusMessage,
                 onOpenLauncherSettings = { viewModel.openDefaultLauncherSettings() },
                 onRefreshLauncherStatus = { viewModel.refreshLauncherStatus() },
+                onTestHomeLauncher = { viewModel.testHomeLauncher() },
                 onSelectStation = { viewModel.selectInitialStation(it) }
             )
         }
@@ -115,7 +116,8 @@ fun KioskApp(viewModel: KioskViewModel) {
             isDefaultLauncher = uiState.isDefaultLauncher,
             launcherStatusMessage = uiState.launcherStatusMessage,
             onOpenLauncherSettings = { viewModel.openDefaultLauncherSettings() },
-            onRefreshLauncherStatus = { viewModel.refreshLauncherStatus() }
+            onRefreshLauncherStatus = { viewModel.refreshLauncherStatus() },
+            onTestHomeLauncher = { viewModel.testHomeLauncher() }
         )
     }
 }

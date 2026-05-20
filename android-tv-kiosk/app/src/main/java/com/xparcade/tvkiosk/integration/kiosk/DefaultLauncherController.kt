@@ -1,8 +1,10 @@
 package com.xparcade.tvkiosk.integration.kiosk
 
 import android.content.ActivityNotFoundException
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.provider.Settings
 
@@ -11,9 +13,20 @@ data class LauncherSettingsResult(
     val message: String
 )
 
+data class LauncherStatus(
+    val isDefault: Boolean,
+    val resolvedPackage: String?,
+    val isPreferredActivity: Boolean,
+    val homeCandidates: List<String>
+)
+
 class DefaultLauncherController(private val context: Context) {
 
     fun isDefaultLauncher(): Boolean {
+        return getLauncherStatus().isDefault
+    }
+
+    fun getLauncherStatus(): LauncherStatus {
         val homeIntent = Intent(Intent.ACTION_MAIN).apply {
             addCategory(Intent.CATEGORY_HOME)
         }
@@ -22,8 +35,20 @@ class DefaultLauncherController(private val context: Context) {
             homeIntent,
             PackageManager.MATCH_DEFAULT_ONLY
         )
+        val resolvedPackage = resolved?.activityInfo?.packageName
+        val isPreferredActivity = isPreferredHomeActivity()
+        val homeCandidates = context.packageManager
+            .queryIntentActivities(homeIntent, 0)
+            .mapNotNull { it.activityInfo?.packageName }
+            .distinct()
+            .sorted()
 
-        return resolved?.activityInfo?.packageName == context.packageName
+        return LauncherStatus(
+            isDefault = resolvedPackage == context.packageName || isPreferredActivity,
+            resolvedPackage = resolvedPackage,
+            isPreferredActivity = isPreferredActivity,
+            homeCandidates = homeCandidates
+        )
     }
 
     fun openDefaultLauncherSettings(): LauncherSettingsResult {
@@ -59,6 +84,35 @@ class DefaultLauncherController(private val context: Context) {
                 message = "Falha ao abrir configuracao: ${error.message.orEmpty()}"
             )
         }
+    }
+
+    fun testHomeButton(): LauncherSettingsResult {
+        val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_HOME)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+        return try {
+            context.startActivity(homeIntent)
+            LauncherSettingsResult(
+                success = true,
+                message = "Comando Home enviado. Se o XP Arcade for padrao, a tela deve continuar/voltar para o bloqueio."
+            )
+        } catch (error: Throwable) {
+            LauncherSettingsResult(
+                success = false,
+                message = "Nao foi possivel testar o Home: ${error.message.orEmpty()}"
+            )
+        }
+    }
+
+    private fun isPreferredHomeActivity(): Boolean {
+        return runCatching {
+            val filters = mutableListOf<IntentFilter>()
+            val activities = mutableListOf<ComponentName>()
+            context.packageManager.getPreferredActivities(filters, activities, context.packageName)
+            activities.any { it.packageName == context.packageName }
+        }.getOrDefault(false)
     }
 
     private fun Intent.canResolve(): Boolean {

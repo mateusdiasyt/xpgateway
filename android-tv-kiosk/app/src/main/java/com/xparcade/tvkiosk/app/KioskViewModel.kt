@@ -678,14 +678,14 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun refreshLauncherStatus() {
-        val isDefault = defaultLauncherController.isDefaultLauncher()
+        val status = defaultLauncherController.getLauncherStatus()
         _uiState.update {
             it.copy(
-                isDefaultLauncher = isDefault,
-                launcherStatusMessage = if (isDefault) {
-                    "XP Arcade ja esta como tela inicial padrao."
+                isDefaultLauncher = status.isDefault,
+                launcherStatusMessage = if (status.isDefault) {
+                    "XP Arcade esta marcado como tela inicial. Pacote Home: ${status.resolvedPackage ?: "nao informado"}."
                 } else {
-                    "Defina o XP Arcade como tela inicial para bloquear o Home e melhorar o retorno automatico."
+                    "A TV ainda reporta Home como ${status.resolvedPackage ?: "nao definido"}. Candidatos: ${status.homeCandidates.joinToString().ifBlank { "nenhum" }}."
                 }
             )
         }
@@ -693,6 +693,13 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
 
     fun openDefaultLauncherSettings() {
         val result = defaultLauncherController.openDefaultLauncherSettings()
+        _uiState.update {
+            it.copy(launcherStatusMessage = result.message)
+        }
+    }
+
+    fun testHomeLauncher() {
+        val result = defaultLauncherController.testHomeButton()
         _uiState.update {
             it.copy(launcherStatusMessage = result.message)
         }

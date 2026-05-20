@@ -148,6 +148,7 @@ private fun LauncherStatusPanel(
     launcherStatusMessage: String?,
     onOpenLauncherSettings: () -> Unit,
     onRefreshLauncherStatus: () -> Unit,
+    onTestHomeLauncher: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     HeroPanel(modifier = modifier) {
@@ -173,6 +174,13 @@ private fun LauncherStatusPanel(
                 ) {
                     Text(if (isDefaultLauncher) "Abrir configuracoes" else "Definir como launcher")
                 }
+                Button(
+                    onClick = onTestHomeLauncher,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF252525)),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Testar Home")
+                }
                 TextButton(onClick = onRefreshLauncherStatus, modifier = Modifier.weight(1f)) {
                     Text("Verificar novamente", color = XpYellow)
                 }
@@ -188,6 +196,7 @@ fun InitialSetupScreen(
     launcherStatusMessage: String?,
     onOpenLauncherSettings: () -> Unit,
     onRefreshLauncherStatus: () -> Unit,
+    onTestHomeLauncher: () -> Unit,
     onSelectStation: (StationPreset) -> Unit
 ) {
     NeonBackground {
@@ -225,6 +234,7 @@ fun InitialSetupScreen(
                 launcherStatusMessage = launcherStatusMessage,
                 onOpenLauncherSettings = onOpenLauncherSettings,
                 onRefreshLauncherStatus = onRefreshLauncherStatus,
+                onTestHomeLauncher = onTestHomeLauncher,
                 modifier = Modifier.fillMaxWidth(0.72f)
             )
             Spacer(modifier = Modifier.height(18.dp))
@@ -478,7 +488,8 @@ fun AdminDialog(
     isDefaultLauncher: Boolean,
     launcherStatusMessage: String?,
     onOpenLauncherSettings: () -> Unit,
-    onRefreshLauncherStatus: () -> Unit
+    onRefreshLauncherStatus: () -> Unit,
+    onTestHomeLauncher: () -> Unit
 ) {
     var stationName by remember { mutableStateOf(currentConfig.stationName) }
     var stationId by remember { mutableStateOf(currentConfig.stationId) }
@@ -555,6 +566,7 @@ fun AdminDialog(
                     launcherStatusMessage = launcherStatusMessage,
                     onOpenLauncherSettings = onOpenLauncherSettings,
                     onRefreshLauncherStatus = onRefreshLauncherStatus,
+                    onTestHomeLauncher = onTestHomeLauncher,
                     modifier = Modifier.fillMaxWidth()
                 )
 
