@@ -27,12 +27,15 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -430,6 +433,12 @@ fun AdminDialog(
     var hdmiSwitchEnabled by remember { mutableStateOf(currentConfig.hdmiSwitchEnabled) }
     var consoleInputId by remember { mutableStateOf(currentConfig.consoleInputId) }
     var forceMinutes by remember { mutableStateOf("30") }
+    var advancedEditingEnabled by remember { mutableStateOf(false) }
+    val initialFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        runCatching { initialFocusRequester.requestFocus() }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -467,11 +476,76 @@ fun AdminDialog(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                OutlinedTextField(value = backendUrl, onValueChange = { backendUrl = it }, label = { Text("URL do PDV") })
-                OutlinedTextField(value = stationName, onValueChange = { stationName = it }, label = { Text("Nome da estacao") })
-                OutlinedTextField(value = stationId, onValueChange = { stationId = it }, label = { Text("Station ID") })
-                OutlinedTextField(value = deviceKey, onValueChange = { deviceKey = it }, label = { Text("Device key (TV)") })
-                OutlinedTextField(value = adminPin, onValueChange = { adminPin = it }, label = { Text("PIN admin") })
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                    Button(
+                        onClick = onTestConnection,
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(initialFocusRequester)
+                    ) {
+                        Text("Testar conexao")
+                    }
+                    Button(onClick = onRefreshHdmiInputs, modifier = Modifier.weight(1f)) {
+                        Text("Recarregar HDMI")
+                    }
+                    TextButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
+                        Text("Fechar", color = XpYellow)
+                    }
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Editar URL, codigos e PIN", color = XpWhite)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Switch(
+                        checked = advancedEditingEnabled,
+                        onCheckedChange = { advancedEditingEnabled = it }
+                    )
+                }
+                Text(
+                    text = if (advancedEditingEnabled) {
+                        "Edicao liberada. O teclado aparece somente ao focar nos campos."
+                    } else {
+                        "Campos travados para navegar na TV sem abrir teclado automaticamente."
+                    },
+                    color = Color(0xFFB8C0CF),
+                    fontSize = 12.sp
+                )
+
+                OutlinedTextField(
+                    value = backendUrl,
+                    onValueChange = { backendUrl = it },
+                    label = { Text("URL do PDV") },
+                    readOnly = !advancedEditingEnabled,
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = stationName,
+                    onValueChange = { stationName = it },
+                    label = { Text("Nome da estacao") },
+                    readOnly = !advancedEditingEnabled,
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = stationId,
+                    onValueChange = { stationId = it },
+                    label = { Text("Station ID") },
+                    readOnly = !advancedEditingEnabled,
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = deviceKey,
+                    onValueChange = { deviceKey = it },
+                    label = { Text("Device key (TV)") },
+                    readOnly = !advancedEditingEnabled,
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = adminPin,
+                    onValueChange = { adminPin = it },
+                    label = { Text("PIN admin") },
+                    readOnly = !advancedEditingEnabled,
+                    singleLine = true
+                )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Iniciar automatico no boot", color = XpWhite)
                     Spacer(modifier = Modifier.width(8.dp))
@@ -500,6 +574,8 @@ fun AdminDialog(
                             onValueChange = { consoleInputId = it },
                             label = { Text("ID da entrada do console") },
                             supportingText = { Text("Use uma entrada detectada abaixo ou cole o ID manualmente.") },
+                            readOnly = !advancedEditingEnabled,
+                            singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
 
@@ -527,9 +603,6 @@ fun AdminDialog(
                         }
 
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                            Button(onClick = onRefreshHdmiInputs, modifier = Modifier.weight(1f)) {
-                                Text("Recarregar HDMI")
-                            }
                             Button(onClick = { onTestHdmiInput(consoleInputId) }, modifier = Modifier.weight(1f)) {
                                 Text("Testar HDMI")
                             }
@@ -546,11 +619,13 @@ fun AdminDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                OutlinedTextField(value = forceMinutes, onValueChange = { forceMinutes = it }, label = { Text("Liberacao local de teste (min)") })
+                OutlinedTextField(
+                    value = forceMinutes,
+                    onValueChange = { forceMinutes = it },
+                    label = { Text("Liberacao local de teste (min)") },
+                    singleLine = true
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                    Button(onClick = onTestConnection) {
-                        Text("Testar conexao")
-                    }
                     Button(onClick = { onForceUnlock(forceMinutes.toIntOrNull() ?: 30) }) {
                         Text("Liberar teste")
                     }
