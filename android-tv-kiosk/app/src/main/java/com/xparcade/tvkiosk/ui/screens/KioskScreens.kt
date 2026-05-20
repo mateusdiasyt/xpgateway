@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.sp
 import com.xparcade.tvkiosk.R
 import com.xparcade.tvkiosk.data.local.AppConfig
 import com.xparcade.tvkiosk.data.local.StationPreset
+import com.xparcade.tvkiosk.integration.hdmi.HdmiInputInfo
 import com.xparcade.tvkiosk.ui.theme.XpBlack
 import com.xparcade.tvkiosk.ui.theme.XpDarkGray
 import com.xparcade.tvkiosk.ui.theme.XpMagenta
@@ -413,7 +414,12 @@ fun AdminDialog(
     onSave: (AppConfig) -> Unit,
     onTestConnection: () -> Unit,
     onForceUnlock: (Int) -> Unit,
-    onEndSession: () -> Unit
+    onEndSession: () -> Unit,
+    hdmiInputs: List<HdmiInputInfo>,
+    hdmiStatusMessage: String?,
+    onRefreshHdmiInputs: () -> Unit,
+    onTestHdmiInput: (String) -> Unit,
+    onReturnToKiosk: () -> Unit
 ) {
     var stationName by remember { mutableStateOf(currentConfig.stationName) }
     var stationId by remember { mutableStateOf(currentConfig.stationId) }
@@ -421,6 +427,8 @@ fun AdminDialog(
     var backendUrl by remember { mutableStateOf(currentConfig.backendUrl) }
     var adminPin by remember { mutableStateOf(currentConfig.adminPin) }
     var autoStartApp by remember { mutableStateOf(currentConfig.autoStartApp) }
+    var hdmiSwitchEnabled by remember { mutableStateOf(currentConfig.hdmiSwitchEnabled) }
+    var consoleInputId by remember { mutableStateOf(currentConfig.consoleInputId) }
     var forceMinutes by remember { mutableStateOf("30") }
 
     AlertDialog(
@@ -434,7 +442,9 @@ fun AdminDialog(
                     backendUrl = backendUrl,
                     adminPin = adminPin,
                     unlockMode = "PDV_ONLY",
-                    autoStartApp = autoStartApp
+                    autoStartApp = autoStartApp,
+                    hdmiSwitchEnabled = hdmiSwitchEnabled,
+                    consoleInputId = consoleInputId
                 )
                 onSave(merged)
             }) {
@@ -466,6 +476,72 @@ fun AdminDialog(
                     Text("Iniciar automatico no boot", color = XpWhite)
                     Spacer(modifier = Modifier.width(8.dp))
                     Switch(checked = autoStartApp, onCheckedChange = { autoStartApp = it })
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                HeroPanel(modifier = Modifier.fillMaxWidth()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("HDMI / CEC experimental", color = XpYellow, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            "O APK tenta abrir a entrada HDMI pelo sistema da TV. Se a TV nao expor as entradas, sera necessario trocar pelo controle ou usar hardware externo.",
+                            color = Color(0xFFDDE2ED),
+                            fontSize = 13.sp,
+                            lineHeight = 18.sp
+                        )
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Trocar para HDMI ao liberar", color = XpWhite)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Switch(checked = hdmiSwitchEnabled, onCheckedChange = { hdmiSwitchEnabled = it })
+                        }
+
+                        OutlinedTextField(
+                            value = consoleInputId,
+                            onValueChange = { consoleInputId = it },
+                            label = { Text("ID da entrada do console") },
+                            supportingText = { Text("Use uma entrada detectada abaixo ou cole o ID manualmente.") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        if (hdmiInputs.isEmpty()) {
+                            Text(
+                                "Nenhuma HDMI detectada. Clique em recarregar ou teste na TV real.",
+                                color = XpMagenta,
+                                fontSize = 13.sp
+                            )
+                        } else {
+                            hdmiInputs.forEach { input ->
+                                Button(
+                                    onClick = { consoleInputId = input.id },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (consoleInputId == input.id) XpMagenta else Color(0xFF252525)
+                                    ),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()) {
+                                        Text(input.label, color = XpWhite, fontWeight = FontWeight.Bold)
+                                        Text(input.id, color = Color(0xFFB8C0CF), fontSize = 11.sp)
+                                    }
+                                }
+                            }
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                            Button(onClick = onRefreshHdmiInputs, modifier = Modifier.weight(1f)) {
+                                Text("Recarregar HDMI")
+                            }
+                            Button(onClick = { onTestHdmiInput(consoleInputId) }, modifier = Modifier.weight(1f)) {
+                                Text("Testar HDMI")
+                            }
+                            TextButton(onClick = onReturnToKiosk, modifier = Modifier.weight(1f)) {
+                                Text("Voltar bloqueio", color = XpYellow)
+                            }
+                        }
+
+                        if (!hdmiStatusMessage.isNullOrBlank()) {
+                            Text(hdmiStatusMessage, color = Color(0xFFDDE2ED), fontSize = 13.sp)
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))

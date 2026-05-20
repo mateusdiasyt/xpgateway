@@ -17,6 +17,7 @@ import com.xparcade.tvkiosk.domain.model.ActiveSession
 import com.xparcade.tvkiosk.domain.model.PricingOption
 import com.xparcade.tvkiosk.domain.state.AppState
 import com.xparcade.tvkiosk.domain.state.KioskUiState
+import com.xparcade.tvkiosk.integration.hdmi.HdmiInputController
 import com.xparcade.tvkiosk.service.SessionGuardService
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -32,6 +33,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
 
     private val preferencesRepository = PreferencesRepository(application.applicationContext)
     private val backendRepository = BackendRepository()
+    private val hdmiInputController = HdmiInputController(application.applicationContext)
 
     private val _uiState = MutableStateFlow(KioskUiState())
     val uiState: StateFlow<KioskUiState> = _uiState.asStateFlow()
@@ -179,6 +181,8 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
             if (uiState.value.activeSession == null) {
                 ensureUnlockFlow()
             }
+
+            refreshHdmiInputs()
         }
     }
 
@@ -359,10 +363,25 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             startCountdown(session)
-            if (session.source == "pdv") {
+            if (session.source == "pdv" || session.source == "manual") {
                 startSessionGuard(session)
                 startActiveSessionMonitor(session)
             }
+        }
+    }
+
+    fun openConsoleInputForActiveSession() {
+        val currentConfig = config
+        if (!currentConfig.hdmiSwitchEnabled) {
+            _uiState.update {
+                it.copy(hdmiStatusMessage = "Troca automatica de HDMI desativada.")
+            }
+            return
+        }
+
+        val result = hdmiInputController.openInput(currentConfig.consoleInputId)
+        _uiState.update {
+            it.copy(hdmiStatusMessage = result.message)
         }
     }
 
@@ -636,6 +655,48 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun refreshHdmiInputs() {
+        viewModelScope.launch {
+            val inputs = hdmiInputController.listInputs()
+            _uiState.update {
+                it.copy(
+                    hdmiInputs = inputs,
+                    hdmiStatusMessage = if (inputs.isEmpty()) {
+                        "Nenhuma entrada HDMI foi exposta pelo sistema da TV."
+                    } else {
+                        "${inputs.size} entrada(s) HDMI detectada(s)."
+                    }
+                )
+            }
+        }
+    }
+
+    fun testHdmiInput(inputId: String) {
+        viewModelScope.launch {
+            val result = hdmiInputController.openInput(inputId)
+            _uiState.update {
+                it.copy(
+                    hdmiStatusMessage = if (result.success) {
+                        "${result.message} O teste volta ao bloqueio em 5 segundos."
+                    } else {
+                        result.message
+                    }
+                )
+            }
+            if (result.success) {
+                delay(5000)
+                bringKioskToFront()
+            }
+        }
+    }
+
+    fun returnToKioskFromAdmin() {
+        bringKioskToFront()
+        _uiState.update {
+            it.copy(hdmiStatusMessage = "Comando enviado para voltar ao bloqueio do XP Arcade.")
+        }
+    }
+
     fun onRemoteKeyDown(keyCode: Int) {
         if (keyBuffer.size >= secretSequence.size) {
             keyBuffer.removeFirst()
@@ -663,6 +724,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                     appState = AppState.ADMIN_MODE
                 )
             }
+            refreshHdmiInputs()
         } else {
             _uiState.update {
                 it.copy(adminPinError = "PIN invalido")

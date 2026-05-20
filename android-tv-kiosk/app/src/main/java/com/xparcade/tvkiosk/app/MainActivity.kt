@@ -58,7 +58,7 @@ class MainActivity : ComponentActivity() {
 
                 if (shouldReleaseScreen && activeSessionId != null && backgroundedSessionId != activeSessionId) {
                     backgroundedSessionId = activeSessionId
-                    moveTaskToBack(true)
+                    viewModel.openConsoleInputForActiveSession()
                 }
 
                 if (!shouldReleaseScreen) {

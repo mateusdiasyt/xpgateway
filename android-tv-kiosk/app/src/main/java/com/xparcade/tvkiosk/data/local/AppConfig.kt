@@ -26,7 +26,9 @@ data class AppConfig(
     val customDurationMinutes: Int = 90,
     val customPrice: Double = 35.0,
     val adminApiKey: String = "change-me-admin-key",
-    val unlockMode: String = UnlockMode.PDV_ONLY
+    val unlockMode: String = UnlockMode.PDV_ONLY,
+    val hdmiSwitchEnabled: Boolean = false,
+    val consoleInputId: String = ""
 )
 
 data class StationPreset(

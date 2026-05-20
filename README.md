@@ -33,7 +33,7 @@ Como o PDV identifica a TV:
 4. A venda salva a liberacao dessa estacao no banco do `xp-pdv`.
 5. O APK consulta o status pelo mesmo `stationId`.
 6. Quando o status volta `PREPARING`, a TV mostra 30 segundos de preparo.
-7. Quando o status vira `ACTIVE`, o APK tenta sair da frente para revelar a entrada HDMI/ultima fonte.
+7. Quando o status vira `ACTIVE`, o APK tenta abrir a entrada HDMI configurada no admin local.
 8. O tempo da sessao fica sendo acompanhado no PDV, na aba `Servicos`.
 
 ## 1. Arquitetura de pastas
@@ -60,7 +60,7 @@ Documentacao inicial:
 5. Caixa conclui a venda no PDV e escolhe a estacao da TV.
 6. O `xp-pdv` grava a sessao com 30 segundos de preparacao.
 7. APK recebe `PREPARING` e mostra a contagem 30, 29, 28...
-8. Ao zerar, o APK recebe/ativa `ACTIVE`, salva a sessao localmente e tenta ir para o fundo para a HDMI aparecer.
+8. Ao zerar, o APK recebe/ativa `ACTIVE`, salva a sessao localmente e tenta abrir a HDMI configurada.
 9. Se a TV reiniciar, o APK recupera a sessao salva no DataStore.
 10. Ao expirar, tenta voltar automaticamente para tela de bloqueio.
 
@@ -225,6 +225,7 @@ No app, use o admin local apenas se precisar ajustar:
 - `stationId`
 - `deviceKey` (chave da TV usada no endpoint `/api/integrations/tv/status`)
 - URL do PDV
+- Entrada HDMI do console, quando a TV expuser esse controle ao Android
 - PIN admin
 
 Valores recomendados:
@@ -260,8 +261,10 @@ Em TVs Android comuns, APK de terceiro geralmente nao controla troca de HDMI de 
 
 Estrategia MVP:
 - App como launcher/tela de bloqueio.
-- Sessao ativa tenta mandar o app para o fundo para revelar a ultima fonte/HDMI.
-- Se o modelo da TV nao permitir esse retorno automatico, a tela ativa orienta o usuario a trocar para HDMI.
+- Sessao ativa tenta abrir a entrada HDMI configurada no admin local.
+- No admin local, use `Recarregar HDMI`, selecione a entrada do console e clique em `Testar HDMI`.
+- O teste volta sozinho para o bloqueio depois de alguns segundos.
+- Se a TV nao listar entradas ou bloquear o comando, a tela ativa orienta o usuario a trocar para HDMI manualmente.
 - O contador operacional fica no PDV.
 - Durante a sessao, o APK mantem um servico guardiao em primeiro plano para continuar contando o tempo mesmo com o app em segundo plano.
 - Se o tempo expirar ou o caixa clicar em `Encerrar tempo` na aba Servicos, o app tenta voltar para frente e exibir o bloqueio.

@@ -4,6 +4,7 @@ import com.xparcade.tvkiosk.domain.model.ActiveSession
 import com.xparcade.tvkiosk.domain.model.CreatePaymentResponse
 import com.xparcade.tvkiosk.domain.model.PricingOption
 import com.xparcade.tvkiosk.data.local.StationPreset
+import com.xparcade.tvkiosk.integration.hdmi.HdmiInputInfo
 
 data class KioskUiState(
     val appState: AppState = AppState.IDLE,
@@ -24,5 +25,7 @@ data class KioskUiState(
     val isAdminDialogVisible: Boolean = false,
     val backendOnline: Boolean = true,
     val lastPaymentSummary: String? = null,
-    val unlockMode: String = "HYBRID"
+    val unlockMode: String = "HYBRID",
+    val hdmiInputs: List<HdmiInputInfo> = emptyList(),
+    val hdmiStatusMessage: String? = null
 )

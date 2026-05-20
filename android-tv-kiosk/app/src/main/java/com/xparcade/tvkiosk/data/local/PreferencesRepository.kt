@@ -33,6 +33,8 @@ class PreferencesRepository(private val context: Context) {
         val customEnabled = booleanPreferencesKey("custom_enabled")
         val customDuration = intPreferencesKey("custom_duration")
         val customPrice = doublePreferencesKey("custom_price")
+        val hdmiSwitchEnabled = booleanPreferencesKey("hdmi_switch_enabled")
+        val consoleInputId = stringPreferencesKey("console_input_id")
 
         val activeSessionId = stringPreferencesKey("active_session_id")
         val activeSessionExpiresAt = longPreferencesKey("active_session_expires_at")
@@ -55,7 +57,9 @@ class PreferencesRepository(private val context: Context) {
             customDurationMinutes = prefs[Keys.customDuration] ?: AppConfig().customDurationMinutes,
             customPrice = prefs[Keys.customPrice] ?: AppConfig().customPrice,
             adminApiKey = prefs[Keys.adminApiKey] ?: AppConfig().adminApiKey,
-            unlockMode = UnlockMode.normalize(prefs[Keys.unlockMode] ?: AppConfig().unlockMode)
+            unlockMode = UnlockMode.normalize(prefs[Keys.unlockMode] ?: AppConfig().unlockMode),
+            hdmiSwitchEnabled = prefs[Keys.hdmiSwitchEnabled] ?: AppConfig().hdmiSwitchEnabled,
+            consoleInputId = prefs[Keys.consoleInputId] ?: AppConfig().consoleInputId
         )
     }
 
@@ -77,6 +81,8 @@ class PreferencesRepository(private val context: Context) {
             prefs[Keys.customPrice] = config.customPrice
             prefs[Keys.adminApiKey] = config.adminApiKey
             prefs[Keys.unlockMode] = UnlockMode.normalize(config.unlockMode)
+            prefs[Keys.hdmiSwitchEnabled] = config.hdmiSwitchEnabled
+            prefs[Keys.consoleInputId] = config.consoleInputId
         }
     }
 

@@ -102,7 +102,12 @@ fun KioskApp(viewModel: KioskViewModel) {
             onSave = { viewModel.saveAdminConfig(it) },
             onTestConnection = { viewModel.refreshStationData() },
             onForceUnlock = { viewModel.forceUnlockFromAdmin(it) },
-            onEndSession = { viewModel.endCurrentSessionFromAdmin() }
+            onEndSession = { viewModel.endCurrentSessionFromAdmin() },
+            hdmiInputs = uiState.hdmiInputs,
+            hdmiStatusMessage = uiState.hdmiStatusMessage,
+            onRefreshHdmiInputs = { viewModel.refreshHdmiInputs() },
+            onTestHdmiInput = { viewModel.testHdmiInput(it) },
+            onReturnToKiosk = { viewModel.returnToKioskFromAdmin() }
         )
     }
 }
