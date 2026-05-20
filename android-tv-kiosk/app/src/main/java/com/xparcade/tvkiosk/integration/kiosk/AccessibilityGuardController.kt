@@ -49,19 +49,9 @@ class AccessibilityGuardController(private val context: Context) {
     fun openAccessibilitySettings(): AccessibilitySettingsResult {
         val candidates = listOf(
             SettingsCandidate(
-                label = "Acessibilidade",
-                intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS),
-                message = "Tela de Acessibilidade aberta. Ative o servico XP Arcade Guardiao."
-            ),
-            SettingsCandidate(
-                label = "Acessibilidade Android TV",
-                intent = Intent("com.android.tv.settings.action.ACCESSIBILITY_SETTINGS"),
-                message = "Tela de Acessibilidade da TV aberta. Ative o servico XP Arcade Guardiao."
-            ),
-            SettingsCandidate(
                 label = "Configuracoes gerais",
                 intent = Intent(Settings.ACTION_SETTINGS),
-                message = "A tela direta nao existe nesta TV. Entre em Sistema > Acessibilidade > XP Arcade Guardiao e ative."
+                message = "Configuracoes abertas. Entre em Sistema > Acessibilidade > XP Arcade Guardiao e ative."
             ),
             SettingsCandidate(
                 label = "Detalhes do app",
@@ -69,17 +59,13 @@ class AccessibilityGuardController(private val context: Context) {
                     Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                     Uri.parse("package:${context.packageName}")
                 ),
-                message = "Abra as configuracoes da TV e procure Acessibilidade > XP Arcade Guardiao."
+                message = "Detalhes do app abertos. Se nao houver Acessibilidade aqui, volte e procure Sistema > Acessibilidade > XP Arcade Guardiao."
             )
         )
 
         for (candidate in candidates) {
             val intent = candidate.intent.apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-
-            if (!canOpen(intent)) {
-                continue
             }
 
             val opened = runCatching {
@@ -99,11 +85,6 @@ class AccessibilityGuardController(private val context: Context) {
             success = false,
             message = "Esta TV bloqueou os atalhos de configuracao. Abra manualmente: Configuracoes > Sistema > Acessibilidade > XP Arcade Guardiao."
         )
-    }
-
-    private fun canOpen(intent: Intent): Boolean {
-        return context.packageManager.queryIntentActivities(intent, 0).isNotEmpty() ||
-            intent.resolveActivity(context.packageManager) != null
     }
 
     private data class SettingsCandidate(

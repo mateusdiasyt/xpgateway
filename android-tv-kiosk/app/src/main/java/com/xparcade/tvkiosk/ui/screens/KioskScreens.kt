@@ -235,7 +235,7 @@ private fun AccessibilityGuardPanel(
             )
             Text(
                 text = accessibilityGuardMessage
-                    ?: "Ative a Acessibilidade para o XP Arcade voltar sozinho quando a TV estiver bloqueada.",
+                    ?: "Ative em Configuracoes > Sistema > Acessibilidade > XP Arcade Guardiao para o bloqueio voltar sozinho.",
                 color = Color(0xFFDDE2ED),
                 fontSize = 15.sp,
                 lineHeight = 20.sp
