@@ -146,6 +146,7 @@ private fun HeroPanel(modifier: Modifier = Modifier, content: @Composable () -> 
 private fun LauncherStatusPanel(
     isDefaultLauncher: Boolean,
     launcherStatusMessage: String?,
+    launcherDiagnostics: List<String>,
     onOpenLauncherSettings: () -> Unit,
     onRefreshLauncherStatus: () -> Unit,
     onTestHomeLauncher: () -> Unit,
@@ -154,7 +155,7 @@ private fun LauncherStatusPanel(
     HeroPanel(modifier = modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = if (isDefaultLauncher) "Launcher pronto" else "Definir tela inicial",
+                text = if (isDefaultLauncher) "Launcher confirmado" else "Launcher pendente",
                 color = if (isDefaultLauncher) XpYellow else XpMagenta,
                 fontSize = 21.sp,
                 fontWeight = FontWeight.ExtraBold
@@ -185,6 +186,32 @@ private fun LauncherStatusPanel(
                     Text("Verificar novamente", color = XpYellow)
                 }
             }
+            if (launcherDiagnostics.isNotEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xAA050505), RoundedCornerShape(14.dp))
+                        .border(1.dp, Color(0x44FF005C), RoundedCornerShape(14.dp))
+                        .padding(12.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "Diagnostico para foto",
+                            color = XpYellow,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        launcherDiagnostics.takeLast(8).forEach { line ->
+                            Text(
+                                text = line,
+                                color = Color(0xFFDDE2ED),
+                                fontSize = 11.sp,
+                                lineHeight = 14.sp
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -194,6 +221,7 @@ fun InitialSetupScreen(
     stationPresets: List<StationPreset>,
     isDefaultLauncher: Boolean,
     launcherStatusMessage: String?,
+    launcherDiagnostics: List<String>,
     onOpenLauncherSettings: () -> Unit,
     onRefreshLauncherStatus: () -> Unit,
     onTestHomeLauncher: () -> Unit,
@@ -201,7 +229,10 @@ fun InitialSetupScreen(
 ) {
     NeonBackground {
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(vertical = 18.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -232,6 +263,7 @@ fun InitialSetupScreen(
             LauncherStatusPanel(
                 isDefaultLauncher = isDefaultLauncher,
                 launcherStatusMessage = launcherStatusMessage,
+                launcherDiagnostics = launcherDiagnostics,
                 onOpenLauncherSettings = onOpenLauncherSettings,
                 onRefreshLauncherStatus = onRefreshLauncherStatus,
                 onTestHomeLauncher = onTestHomeLauncher,
@@ -487,6 +519,7 @@ fun AdminDialog(
     onReturnToKiosk: () -> Unit,
     isDefaultLauncher: Boolean,
     launcherStatusMessage: String?,
+    launcherDiagnostics: List<String>,
     onOpenLauncherSettings: () -> Unit,
     onRefreshLauncherStatus: () -> Unit,
     onTestHomeLauncher: () -> Unit
@@ -564,6 +597,7 @@ fun AdminDialog(
                 LauncherStatusPanel(
                     isDefaultLauncher = isDefaultLauncher,
                     launcherStatusMessage = launcherStatusMessage,
+                    launcherDiagnostics = launcherDiagnostics,
                     onOpenLauncherSettings = onOpenLauncherSettings,
                     onRefreshLauncherStatus = onRefreshLauncherStatus,
                     onTestHomeLauncher = onTestHomeLauncher,

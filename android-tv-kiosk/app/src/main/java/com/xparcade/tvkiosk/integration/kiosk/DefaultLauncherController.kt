@@ -17,7 +17,8 @@ data class LauncherStatus(
     val isDefault: Boolean,
     val resolvedPackage: String?,
     val isPreferredActivity: Boolean,
-    val homeCandidates: List<String>
+    val homeCandidates: List<String>,
+    val diagnostics: List<String>
 )
 
 class DefaultLauncherController(private val context: Context) {
@@ -42,12 +43,22 @@ class DefaultLauncherController(private val context: Context) {
             .mapNotNull { it.activityInfo?.packageName }
             .distinct()
             .sorted()
+        val isResolvedToThisApp = resolvedPackage == context.packageName
+
+        val diagnostics = listOf(
+            "App atual: ${context.packageName}",
+            "Home resolvido: ${resolvedPackage ?: "nao informado"}",
+            "Preferencia registrada para XP: ${if (isPreferredActivity) "sim" else "nao"}",
+            "Candidatos HOME: ${homeCandidates.joinToString().ifBlank { "nenhum" }}",
+            "Conclusao: ${if (isResolvedToThisApp) "Home abre o XP Arcade" else "Home ainda abre outro launcher"}"
+        )
 
         return LauncherStatus(
-            isDefault = resolvedPackage == context.packageName || isPreferredActivity,
+            isDefault = isResolvedToThisApp,
             resolvedPackage = resolvedPackage,
             isPreferredActivity = isPreferredActivity,
-            homeCandidates = homeCandidates
+            homeCandidates = homeCandidates,
+            diagnostics = diagnostics
         )
     }
 

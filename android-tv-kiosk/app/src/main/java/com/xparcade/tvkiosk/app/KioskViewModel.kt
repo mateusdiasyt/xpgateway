@@ -683,10 +683,11 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
             it.copy(
                 isDefaultLauncher = status.isDefault,
                 launcherStatusMessage = if (status.isDefault) {
-                    "XP Arcade esta marcado como tela inicial. Pacote Home: ${status.resolvedPackage ?: "nao informado"}."
+                    "Home confirmado: o botao Home abre o XP Arcade."
                 } else {
-                    "A TV ainda reporta Home como ${status.resolvedPackage ?: "nao definido"}. Candidatos: ${status.homeCandidates.joinToString().ifBlank { "nenhum" }}."
-                }
+                    "A TV ainda reporta Home como ${status.resolvedPackage ?: "nao definido"}. O XP pode estar marcado, mas o Google TV continua interceptando o Home."
+                },
+                launcherDiagnostics = status.diagnostics
             )
         }
     }
@@ -694,14 +695,20 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     fun openDefaultLauncherSettings() {
         val result = defaultLauncherController.openDefaultLauncherSettings()
         _uiState.update {
-            it.copy(launcherStatusMessage = result.message)
+            it.copy(
+                launcherStatusMessage = result.message,
+                launcherDiagnostics = it.launcherDiagnostics + "Acao: abrir configuracao de launcher."
+            )
         }
     }
 
     fun testHomeLauncher() {
         val result = defaultLauncherController.testHomeButton()
         _uiState.update {
-            it.copy(launcherStatusMessage = result.message)
+            it.copy(
+                launcherStatusMessage = result.message,
+                launcherDiagnostics = it.launcherDiagnostics + "Acao: testar comando Home pelo APK."
+            )
         }
     }
 

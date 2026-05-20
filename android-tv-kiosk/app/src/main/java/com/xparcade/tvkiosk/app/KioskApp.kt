@@ -29,6 +29,7 @@ fun KioskApp(viewModel: KioskViewModel) {
                 stationPresets = uiState.stationPresets,
                 isDefaultLauncher = uiState.isDefaultLauncher,
                 launcherStatusMessage = uiState.launcherStatusMessage,
+                launcherDiagnostics = uiState.launcherDiagnostics,
                 onOpenLauncherSettings = { viewModel.openDefaultLauncherSettings() },
                 onRefreshLauncherStatus = { viewModel.refreshLauncherStatus() },
                 onTestHomeLauncher = { viewModel.testHomeLauncher() },
@@ -115,6 +116,7 @@ fun KioskApp(viewModel: KioskViewModel) {
             onReturnToKiosk = { viewModel.returnToKioskFromAdmin() },
             isDefaultLauncher = uiState.isDefaultLauncher,
             launcherStatusMessage = uiState.launcherStatusMessage,
+            launcherDiagnostics = uiState.launcherDiagnostics,
             onOpenLauncherSettings = { viewModel.openDefaultLauncherSettings() },
             onRefreshLauncherStatus = { viewModel.refreshLauncherStatus() },
             onTestHomeLauncher = { viewModel.testHomeLauncher() }
