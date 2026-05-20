@@ -27,5 +27,7 @@ data class KioskUiState(
     val lastPaymentSummary: String? = null,
     val unlockMode: String = "HYBRID",
     val hdmiInputs: List<HdmiInputInfo> = emptyList(),
-    val hdmiStatusMessage: String? = null
+    val hdmiStatusMessage: String? = null,
+    val isDefaultLauncher: Boolean = false,
+    val launcherStatusMessage: String? = null
 )

@@ -27,6 +27,10 @@ fun KioskApp(viewModel: KioskViewModel) {
         AppState.INITIAL_SETUP -> {
             InitialSetupScreen(
                 stationPresets = uiState.stationPresets,
+                isDefaultLauncher = uiState.isDefaultLauncher,
+                launcherStatusMessage = uiState.launcherStatusMessage,
+                onOpenLauncherSettings = { viewModel.openDefaultLauncherSettings() },
+                onRefreshLauncherStatus = { viewModel.refreshLauncherStatus() },
                 onSelectStation = { viewModel.selectInitialStation(it) }
             )
         }
@@ -107,7 +111,11 @@ fun KioskApp(viewModel: KioskViewModel) {
             hdmiStatusMessage = uiState.hdmiStatusMessage,
             onRefreshHdmiInputs = { viewModel.refreshHdmiInputs() },
             onTestHdmiInput = { viewModel.testHdmiInput(it) },
-            onReturnToKiosk = { viewModel.returnToKioskFromAdmin() }
+            onReturnToKiosk = { viewModel.returnToKioskFromAdmin() },
+            isDefaultLauncher = uiState.isDefaultLauncher,
+            launcherStatusMessage = uiState.launcherStatusMessage,
+            onOpenLauncherSettings = { viewModel.openDefaultLauncherSettings() },
+            onRefreshLauncherStatus = { viewModel.refreshLauncherStatus() }
         )
     }
 }

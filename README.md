@@ -220,12 +220,23 @@ Na primeira abertura, o app mostra duas opcoes prontas:
 
 Selecione pelo controle remoto. Essa escolha fica salva na propria TV.
 
+Antes ou depois de escolher a TV, use o assistente `Definir como launcher`:
+
+1. Clique em `Definir como launcher`.
+2. A TV deve abrir a tela de app de `Tela inicial`/`Home`.
+3. Escolha `XP Arcade`.
+4. Confirme como `Sempre`, se a TV perguntar.
+5. Volte ao app e clique em `Verificar novamente`.
+
+Esse passo depende do fabricante da TV. O APK nao pode se definir como launcher sozinho, mas abre as telas padrao/fallback do Android para facilitar a configuracao.
+
 No app, use o admin local apenas se precisar ajustar:
 - Nome da estacao
 - `stationId`
 - `deviceKey` (chave da TV usada no endpoint `/api/integrations/tv/status`)
 - URL do PDV
 - Entrada HDMI do console, quando a TV expuser esse controle ao Android
+- Launcher padrao da TV, usando `Definir como launcher`
 - PIN admin
 
 Valores recomendados:

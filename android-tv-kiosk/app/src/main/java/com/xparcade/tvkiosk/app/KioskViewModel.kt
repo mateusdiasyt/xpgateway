@@ -17,6 +17,7 @@ import com.xparcade.tvkiosk.domain.model.PricingOption
 import com.xparcade.tvkiosk.domain.state.AppState
 import com.xparcade.tvkiosk.domain.state.KioskUiState
 import com.xparcade.tvkiosk.integration.hdmi.HdmiInputController
+import com.xparcade.tvkiosk.integration.kiosk.DefaultLauncherController
 import com.xparcade.tvkiosk.integration.kiosk.KioskLauncher
 import com.xparcade.tvkiosk.service.SessionGuardService
 import kotlinx.coroutines.Job
@@ -34,6 +35,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     private val preferencesRepository = PreferencesRepository(application.applicationContext)
     private val backendRepository = BackendRepository()
     private val hdmiInputController = HdmiInputController(application.applicationContext)
+    private val defaultLauncherController = DefaultLauncherController(application.applicationContext)
 
     private val _uiState = MutableStateFlow(KioskUiState())
     val uiState: StateFlow<KioskUiState> = _uiState.asStateFlow()
@@ -63,6 +65,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         bootstrap()
+        refreshLauncherStatus()
     }
 
     fun shouldBlockBack(): Boolean {
@@ -183,6 +186,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             refreshHdmiInputs()
+            refreshLauncherStatus()
         }
     }
 
@@ -673,6 +677,27 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun refreshLauncherStatus() {
+        val isDefault = defaultLauncherController.isDefaultLauncher()
+        _uiState.update {
+            it.copy(
+                isDefaultLauncher = isDefault,
+                launcherStatusMessage = if (isDefault) {
+                    "XP Arcade ja esta como tela inicial padrao."
+                } else {
+                    "Defina o XP Arcade como tela inicial para bloquear o Home e melhorar o retorno automatico."
+                }
+            )
+        }
+    }
+
+    fun openDefaultLauncherSettings() {
+        val result = defaultLauncherController.openDefaultLauncherSettings()
+        _uiState.update {
+            it.copy(launcherStatusMessage = result.message)
+        }
+    }
+
     fun testHdmiInput(inputId: String) {
         viewModelScope.launch {
             val result = hdmiInputController.openInput(inputId)
@@ -727,6 +752,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
             refreshHdmiInputs()
+            refreshLauncherStatus()
         } else {
             _uiState.update {
                 it.copy(adminPinError = "PIN invalido")

@@ -143,8 +143,51 @@ private fun HeroPanel(modifier: Modifier = Modifier, content: @Composable () -> 
 }
 
 @Composable
+private fun LauncherStatusPanel(
+    isDefaultLauncher: Boolean,
+    launcherStatusMessage: String?,
+    onOpenLauncherSettings: () -> Unit,
+    onRefreshLauncherStatus: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    HeroPanel(modifier = modifier) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = if (isDefaultLauncher) "Launcher pronto" else "Definir tela inicial",
+                color = if (isDefaultLauncher) XpYellow else XpMagenta,
+                fontSize = 21.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Text(
+                text = launcherStatusMessage
+                    ?: "Para bloquear o Home, configure o XP Arcade como app de tela inicial padrao.",
+                color = Color(0xFFDDE2ED),
+                fontSize = 15.sp,
+                lineHeight = 20.sp
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                Button(
+                    onClick = onOpenLauncherSettings,
+                    colors = ButtonDefaults.buttonColors(containerColor = if (isDefaultLauncher) Color(0xFF252525) else XpMagenta),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(if (isDefaultLauncher) "Abrir configuracoes" else "Definir como launcher")
+                }
+                TextButton(onClick = onRefreshLauncherStatus, modifier = Modifier.weight(1f)) {
+                    Text("Verificar novamente", color = XpYellow)
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun InitialSetupScreen(
     stationPresets: List<StationPreset>,
+    isDefaultLauncher: Boolean,
+    launcherStatusMessage: String?,
+    onOpenLauncherSettings: () -> Unit,
+    onRefreshLauncherStatus: () -> Unit,
     onSelectStation: (StationPreset) -> Unit
 ) {
     NeonBackground {
@@ -176,6 +219,15 @@ fun InitialSetupScreen(
                 textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(28.dp))
+
+            LauncherStatusPanel(
+                isDefaultLauncher = isDefaultLauncher,
+                launcherStatusMessage = launcherStatusMessage,
+                onOpenLauncherSettings = onOpenLauncherSettings,
+                onRefreshLauncherStatus = onRefreshLauncherStatus,
+                modifier = Modifier.fillMaxWidth(0.72f)
+            )
+            Spacer(modifier = Modifier.height(18.dp))
 
             HeroPanel(modifier = Modifier.fillMaxWidth(0.72f)) {
                 Column(
@@ -422,7 +474,11 @@ fun AdminDialog(
     hdmiStatusMessage: String?,
     onRefreshHdmiInputs: () -> Unit,
     onTestHdmiInput: (String) -> Unit,
-    onReturnToKiosk: () -> Unit
+    onReturnToKiosk: () -> Unit,
+    isDefaultLauncher: Boolean,
+    launcherStatusMessage: String?,
+    onOpenLauncherSettings: () -> Unit,
+    onRefreshLauncherStatus: () -> Unit
 ) {
     var stationName by remember { mutableStateOf(currentConfig.stationName) }
     var stationId by remember { mutableStateOf(currentConfig.stationId) }
@@ -492,6 +548,15 @@ fun AdminDialog(
                         Text("Fechar", color = XpYellow)
                     }
                 }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                LauncherStatusPanel(
+                    isDefaultLauncher = isDefaultLauncher,
+                    launcherStatusMessage = launcherStatusMessage,
+                    onOpenLauncherSettings = onOpenLauncherSettings,
+                    onRefreshLauncherStatus = onRefreshLauncherStatus,
+                    modifier = Modifier.fillMaxWidth()
+                )
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Editar URL, codigos e PIN", color = XpWhite)
