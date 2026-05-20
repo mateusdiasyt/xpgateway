@@ -1,6 +1,5 @@
 ﻿package com.xparcade.tvkiosk.app
 
-import android.app.ActivityManager
 import android.app.Application
 import android.content.Intent
 import android.os.Build
@@ -18,6 +17,7 @@ import com.xparcade.tvkiosk.domain.model.PricingOption
 import com.xparcade.tvkiosk.domain.state.AppState
 import com.xparcade.tvkiosk.domain.state.KioskUiState
 import com.xparcade.tvkiosk.integration.hdmi.HdmiInputController
+import com.xparcade.tvkiosk.integration.kiosk.KioskLauncher
 import com.xparcade.tvkiosk.service.SessionGuardService
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -363,9 +363,11 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             startCountdown(session)
-            if (session.source == "pdv" || session.source == "manual") {
+            if (session.source == "pdv" || session.source.startsWith("manual")) {
                 startSessionGuard(session)
-                startActiveSessionMonitor(session)
+                if (session.source != "manual-local") {
+                    startActiveSessionMonitor(session)
+                }
             }
         }
     }
@@ -767,21 +769,6 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun bringKioskToFront() {
         val context = getApplication<Application>().applicationContext
-        val intent = Intent(context, MainActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
-            addFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
-            addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        }
-
-        runCatching {
-            val activityManager = context.getSystemService(ActivityManager::class.java)
-            activityManager?.appTasks?.firstOrNull()?.moveToFront()
-        }
-
-        runCatching {
-            context.startActivity(intent)
-        }
+        KioskLauncher.bringToFront(context)
     }
 }

@@ -1,6 +1,5 @@
 package com.xparcade.tvkiosk.service
 
-import android.app.ActivityManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -10,9 +9,9 @@ import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import com.xparcade.tvkiosk.R
-import com.xparcade.tvkiosk.app.MainActivity
 import com.xparcade.tvkiosk.data.local.AppConfig
 import com.xparcade.tvkiosk.data.repository.BackendRepository
+import com.xparcade.tvkiosk.integration.kiosk.KioskLauncher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -86,22 +85,7 @@ class SessionGuardService : Service() {
     }
 
     private fun openKioskAndStop() {
-        val intent = Intent(this, MainActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
-            addFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
-            addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        }
-
-        runCatching {
-            getSystemService(ActivityManager::class.java)?.appTasks?.firstOrNull()?.moveToFront()
-        }
-
-        runCatching {
-            startActivity(intent)
-        }
-
+        KioskLauncher.bringToFront(this)
         stopSelf()
     }
 
@@ -111,7 +95,7 @@ class SessionGuardService : Service() {
         val pendingIntent = PendingIntent.getActivity(
             this,
             0,
-            Intent(this, MainActivity::class.java),
+            KioskLauncher.buildLaunchIntent(this),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
