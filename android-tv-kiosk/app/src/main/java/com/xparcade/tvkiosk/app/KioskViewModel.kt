@@ -17,6 +17,7 @@ import com.xparcade.tvkiosk.domain.model.PricingOption
 import com.xparcade.tvkiosk.domain.state.AppState
 import com.xparcade.tvkiosk.domain.state.KioskUiState
 import com.xparcade.tvkiosk.integration.hdmi.HdmiInputController
+import com.xparcade.tvkiosk.integration.kiosk.AccessibilityGuardController
 import com.xparcade.tvkiosk.integration.kiosk.DefaultLauncherController
 import com.xparcade.tvkiosk.integration.kiosk.KioskLauncher
 import com.xparcade.tvkiosk.service.SessionGuardService
@@ -36,6 +37,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     private val backendRepository = BackendRepository()
     private val hdmiInputController = HdmiInputController(application.applicationContext)
     private val defaultLauncherController = DefaultLauncherController(application.applicationContext)
+    private val accessibilityGuardController = AccessibilityGuardController(application.applicationContext)
 
     private val _uiState = MutableStateFlow(KioskUiState())
     val uiState: StateFlow<KioskUiState> = _uiState.asStateFlow()
@@ -66,6 +68,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     init {
         bootstrap()
         refreshLauncherStatus()
+        refreshAccessibilityGuardStatus()
     }
 
     fun shouldBlockBack(): Boolean {
@@ -187,6 +190,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
 
             refreshHdmiInputs()
             refreshLauncherStatus()
+            refreshAccessibilityGuardStatus()
         }
     }
 
@@ -692,6 +696,21 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun refreshAccessibilityGuardStatus() {
+        val status = accessibilityGuardController.getStatus()
+        _uiState.update {
+            it.copy(
+                isAccessibilityGuardEnabled = status.isEnabled,
+                accessibilityGuardMessage = if (status.isEnabled) {
+                    "Guardiao ativo: quando a TV estiver bloqueada, o XP tenta voltar sozinho."
+                } else {
+                    "Guardiao desligado: ative a Acessibilidade para reforcar o bloqueio."
+                },
+                accessibilityGuardDiagnostics = status.diagnostics
+            )
+        }
+    }
+
     fun openDefaultLauncherSettings() {
         val result = defaultLauncherController.openDefaultLauncherSettings()
         _uiState.update {
@@ -699,6 +718,22 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                 launcherStatusMessage = result.message,
                 launcherDiagnostics = it.launcherDiagnostics + "Acao: abrir configuracao de launcher."
             )
+        }
+    }
+
+    fun openAccessibilitySettings() {
+        viewModelScope.launch {
+            preferencesRepository.allowGuardianSetupFor(GUARDIAN_SETUP_GRACE_MS)
+            val result = accessibilityGuardController.openAccessibilitySettings()
+            val status = accessibilityGuardController.getStatus()
+
+            _uiState.update {
+                it.copy(
+                    accessibilityGuardMessage = result.message,
+                    isAccessibilityGuardEnabled = status.isEnabled,
+                    accessibilityGuardDiagnostics = status.diagnostics + "Acao: abrir tela de Acessibilidade."
+                )
+            }
         }
     }
 
@@ -767,6 +802,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
             }
             refreshHdmiInputs()
             refreshLauncherStatus()
+            refreshAccessibilityGuardStatus()
         } else {
             _uiState.update {
                 it.copy(adminPinError = "PIN invalido")
@@ -810,5 +846,9 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     private fun bringKioskToFront() {
         val context = getApplication<Application>().applicationContext
         KioskLauncher.bringToFront(context)
+    }
+
+    private companion object {
+        private const val GUARDIAN_SETUP_GRACE_MS = 120_000L
     }
 }

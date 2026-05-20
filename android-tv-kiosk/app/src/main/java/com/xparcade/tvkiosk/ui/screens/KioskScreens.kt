@@ -217,14 +217,85 @@ private fun LauncherStatusPanel(
 }
 
 @Composable
+private fun AccessibilityGuardPanel(
+    isAccessibilityGuardEnabled: Boolean,
+    accessibilityGuardMessage: String?,
+    accessibilityGuardDiagnostics: List<String>,
+    onOpenAccessibilitySettings: () -> Unit,
+    onRefreshAccessibilityGuardStatus: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    HeroPanel(modifier = modifier) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = if (isAccessibilityGuardEnabled) "Guardiao ativo" else "Guardiao pendente",
+                color = if (isAccessibilityGuardEnabled) XpYellow else XpMagenta,
+                fontSize = 21.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Text(
+                text = accessibilityGuardMessage
+                    ?: "Ative a Acessibilidade para o XP Arcade voltar sozinho quando a TV estiver bloqueada.",
+                color = Color(0xFFDDE2ED),
+                fontSize = 15.sp,
+                lineHeight = 20.sp
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                Button(
+                    onClick = onOpenAccessibilitySettings,
+                    colors = ButtonDefaults.buttonColors(containerColor = if (isAccessibilityGuardEnabled) Color(0xFF252525) else XpMagenta),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(if (isAccessibilityGuardEnabled) "Abrir Acessibilidade" else "Ativar guardiao")
+                }
+                TextButton(onClick = onRefreshAccessibilityGuardStatus, modifier = Modifier.weight(1f)) {
+                    Text("Verificar guardiao", color = XpYellow)
+                }
+            }
+            if (accessibilityGuardDiagnostics.isNotEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xAA050505), RoundedCornerShape(14.dp))
+                        .border(1.dp, Color(0x44FF005C), RoundedCornerShape(14.dp))
+                        .padding(12.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "Diagnostico do guardiao",
+                            color = XpYellow,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        accessibilityGuardDiagnostics.takeLast(8).forEach { line ->
+                            Text(
+                                text = line,
+                                color = Color(0xFFDDE2ED),
+                                fontSize = 11.sp,
+                                lineHeight = 14.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun InitialSetupScreen(
     stationPresets: List<StationPreset>,
     isDefaultLauncher: Boolean,
     launcherStatusMessage: String?,
     launcherDiagnostics: List<String>,
+    isAccessibilityGuardEnabled: Boolean,
+    accessibilityGuardMessage: String?,
+    accessibilityGuardDiagnostics: List<String>,
     onOpenLauncherSettings: () -> Unit,
     onRefreshLauncherStatus: () -> Unit,
     onTestHomeLauncher: () -> Unit,
+    onOpenAccessibilitySettings: () -> Unit,
+    onRefreshAccessibilityGuardStatus: () -> Unit,
     onSelectStation: (StationPreset) -> Unit
 ) {
     NeonBackground {
@@ -267,6 +338,16 @@ fun InitialSetupScreen(
                 onOpenLauncherSettings = onOpenLauncherSettings,
                 onRefreshLauncherStatus = onRefreshLauncherStatus,
                 onTestHomeLauncher = onTestHomeLauncher,
+                modifier = Modifier.fillMaxWidth(0.72f)
+            )
+            Spacer(modifier = Modifier.height(18.dp))
+
+            AccessibilityGuardPanel(
+                isAccessibilityGuardEnabled = isAccessibilityGuardEnabled,
+                accessibilityGuardMessage = accessibilityGuardMessage,
+                accessibilityGuardDiagnostics = accessibilityGuardDiagnostics,
+                onOpenAccessibilitySettings = onOpenAccessibilitySettings,
+                onRefreshAccessibilityGuardStatus = onRefreshAccessibilityGuardStatus,
                 modifier = Modifier.fillMaxWidth(0.72f)
             )
             Spacer(modifier = Modifier.height(18.dp))
@@ -520,9 +601,14 @@ fun AdminDialog(
     isDefaultLauncher: Boolean,
     launcherStatusMessage: String?,
     launcherDiagnostics: List<String>,
+    isAccessibilityGuardEnabled: Boolean,
+    accessibilityGuardMessage: String?,
+    accessibilityGuardDiagnostics: List<String>,
     onOpenLauncherSettings: () -> Unit,
     onRefreshLauncherStatus: () -> Unit,
-    onTestHomeLauncher: () -> Unit
+    onTestHomeLauncher: () -> Unit,
+    onOpenAccessibilitySettings: () -> Unit,
+    onRefreshAccessibilityGuardStatus: () -> Unit
 ) {
     var stationName by remember { mutableStateOf(currentConfig.stationName) }
     var stationId by remember { mutableStateOf(currentConfig.stationId) }
@@ -601,6 +687,16 @@ fun AdminDialog(
                     onOpenLauncherSettings = onOpenLauncherSettings,
                     onRefreshLauncherStatus = onRefreshLauncherStatus,
                     onTestHomeLauncher = onTestHomeLauncher,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+                AccessibilityGuardPanel(
+                    isAccessibilityGuardEnabled = isAccessibilityGuardEnabled,
+                    accessibilityGuardMessage = accessibilityGuardMessage,
+                    accessibilityGuardDiagnostics = accessibilityGuardDiagnostics,
+                    onOpenAccessibilitySettings = onOpenAccessibilitySettings,
+                    onRefreshAccessibilityGuardStatus = onRefreshAccessibilityGuardStatus,
                     modifier = Modifier.fillMaxWidth()
                 )
 

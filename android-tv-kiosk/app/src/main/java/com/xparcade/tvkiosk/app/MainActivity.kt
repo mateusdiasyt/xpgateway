@@ -33,6 +33,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         viewModel.refreshLauncherStatus()
+        viewModel.refreshAccessibilityGuardStatus()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

@@ -35,6 +35,7 @@ class PreferencesRepository(private val context: Context) {
         val customPrice = doublePreferencesKey("custom_price")
         val hdmiSwitchEnabled = booleanPreferencesKey("hdmi_switch_enabled")
         val consoleInputId = stringPreferencesKey("console_input_id")
+        val guardianSetupGraceUntil = longPreferencesKey("guardian_setup_grace_until")
 
         val activeSessionId = stringPreferencesKey("active_session_id")
         val activeSessionExpiresAt = longPreferencesKey("active_session_expires_at")
@@ -117,5 +118,16 @@ class PreferencesRepository(private val context: Context) {
             durationMinutes = duration,
             source = source
         )
+    }
+
+    suspend fun allowGuardianSetupFor(durationMillis: Long) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.guardianSetupGraceUntil] = System.currentTimeMillis() + durationMillis
+        }
+    }
+
+    suspend fun getGuardianSetupGraceUntil(): Long {
+        val prefs: Preferences = context.dataStore.data.first()
+        return prefs[Keys.guardianSetupGraceUntil] ?: 0L
     }
 }

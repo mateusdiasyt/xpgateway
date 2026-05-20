@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">XP Arcade TV Kiosk</string>
+    <string name="accessibility_guard_description">Mantem o XP Arcade bloqueando a TV quando nao existe sessao ativa.</string>
 </resources>

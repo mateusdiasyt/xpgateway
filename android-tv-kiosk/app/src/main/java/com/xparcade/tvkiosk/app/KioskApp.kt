@@ -30,9 +30,14 @@ fun KioskApp(viewModel: KioskViewModel) {
                 isDefaultLauncher = uiState.isDefaultLauncher,
                 launcherStatusMessage = uiState.launcherStatusMessage,
                 launcherDiagnostics = uiState.launcherDiagnostics,
+                isAccessibilityGuardEnabled = uiState.isAccessibilityGuardEnabled,
+                accessibilityGuardMessage = uiState.accessibilityGuardMessage,
+                accessibilityGuardDiagnostics = uiState.accessibilityGuardDiagnostics,
                 onOpenLauncherSettings = { viewModel.openDefaultLauncherSettings() },
                 onRefreshLauncherStatus = { viewModel.refreshLauncherStatus() },
                 onTestHomeLauncher = { viewModel.testHomeLauncher() },
+                onOpenAccessibilitySettings = { viewModel.openAccessibilitySettings() },
+                onRefreshAccessibilityGuardStatus = { viewModel.refreshAccessibilityGuardStatus() },
                 onSelectStation = { viewModel.selectInitialStation(it) }
             )
         }
@@ -117,9 +122,14 @@ fun KioskApp(viewModel: KioskViewModel) {
             isDefaultLauncher = uiState.isDefaultLauncher,
             launcherStatusMessage = uiState.launcherStatusMessage,
             launcherDiagnostics = uiState.launcherDiagnostics,
+            isAccessibilityGuardEnabled = uiState.isAccessibilityGuardEnabled,
+            accessibilityGuardMessage = uiState.accessibilityGuardMessage,
+            accessibilityGuardDiagnostics = uiState.accessibilityGuardDiagnostics,
             onOpenLauncherSettings = { viewModel.openDefaultLauncherSettings() },
             onRefreshLauncherStatus = { viewModel.refreshLauncherStatus() },
-            onTestHomeLauncher = { viewModel.testHomeLauncher() }
+            onTestHomeLauncher = { viewModel.testHomeLauncher() },
+            onOpenAccessibilitySettings = { viewModel.openAccessibilitySettings() },
+            onRefreshAccessibilityGuardStatus = { viewModel.refreshAccessibilityGuardStatus() }
         )
     }
 }

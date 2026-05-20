@@ -30,5 +30,8 @@ data class KioskUiState(
     val hdmiStatusMessage: String? = null,
     val isDefaultLauncher: Boolean = false,
     val launcherStatusMessage: String? = null,
-    val launcherDiagnostics: List<String> = emptyList()
+    val launcherDiagnostics: List<String> = emptyList(),
+    val isAccessibilityGuardEnabled: Boolean = false,
+    val accessibilityGuardMessage: String? = null,
+    val accessibilityGuardDiagnostics: List<String> = emptyList()
 )
