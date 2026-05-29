@@ -783,10 +783,15 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
             keyBuffer.clear()
             _uiState.update {
                 it.copy(
-                    isAdminPinPromptVisible = true,
-                    adminPinError = null
+                    isAdminPinPromptVisible = false,
+                    adminPinError = null,
+                    isAdminDialogVisible = true,
+                    appState = AppState.ADMIN_MODE
                 )
             }
+            refreshHdmiInputs()
+            refreshLauncherStatus()
+            refreshAccessibilityGuardStatus()
         }
     }
 
