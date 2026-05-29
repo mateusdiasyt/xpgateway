@@ -586,6 +586,39 @@ fun ErrorScreen(message: String, onRetry: () -> Unit) {
 }
 
 @Composable
+private fun AdminCompactCard(
+    title: String,
+    status: String,
+    isOk: Boolean,
+    modifier: Modifier = Modifier,
+    action: @Composable (() -> Unit)? = null
+) {
+    Box(
+        modifier = modifier
+            .background(Color(0xCC111111), RoundedCornerShape(18.dp))
+            .border(
+                1.dp,
+                if (isOk) Color(0x8845F7B0) else Color(0x88FF005C),
+                RoundedCornerShape(18.dp)
+            )
+            .padding(16.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+            Text(title, color = XpWhite, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Text(
+                status,
+                color = if (isOk) Color(0xFFBFFFD9) else Color(0xFFFFB4CC),
+                fontSize = 13.sp,
+                lineHeight = 17.sp
+            )
+            if (action != null) {
+                action()
+            }
+        }
+    }
+}
+
+@Composable
 fun AdminDialog(
     currentConfig: AppConfig,
     onDismiss: () -> Unit,
@@ -614,13 +647,13 @@ fun AdminDialog(
     var stationId by remember { mutableStateOf(currentConfig.stationId) }
     var deviceKey by remember { mutableStateOf(currentConfig.deviceKey) }
     var backendUrl by remember { mutableStateOf(currentConfig.backendUrl) }
-    var adminPin by remember { mutableStateOf(currentConfig.adminPin) }
     var autoStartApp by remember { mutableStateOf(currentConfig.autoStartApp) }
     var hdmiSwitchEnabled by remember { mutableStateOf(currentConfig.hdmiSwitchEnabled) }
     var consoleInputId by remember { mutableStateOf(currentConfig.consoleInputId) }
-    var forceMinutes by remember { mutableStateOf("30") }
-    var advancedEditingEnabled by remember { mutableStateOf(false) }
+    var forceMinutes by remember { mutableStateOf(30) }
+    var advancedOpen by remember { mutableStateOf(false) }
     val initialFocusRequester = remember { FocusRequester() }
+    val selectedHdmi = hdmiInputs.firstOrNull { it.id == consoleInputId }
 
     LaunchedEffect(Unit) {
         runCatching { initialFocusRequester.requestFocus() }
@@ -635,7 +668,6 @@ fun AdminDialog(
                     stationId = stationId,
                     deviceKey = deviceKey,
                     backendUrl = backendUrl,
-                    adminPin = adminPin,
                     unlockMode = "PDV_ONLY",
                     autoStartApp = autoStartApp,
                     hdmiSwitchEnabled = hdmiSwitchEnabled,
@@ -655,11 +687,7 @@ fun AdminDialog(
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Text("Admin local", color = XpYellow, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                Text(
-                    "Modo PDV: informe a URL do xp-pdv e o codigo desta TV.",
-                    color = XpWhite,
-                    fontSize = 14.sp
-                )
+                Text("Controle rapido da TV", color = Color(0xFFB8C0CF), fontSize = 13.sp)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
@@ -674,121 +702,65 @@ fun AdminDialog(
                     Button(onClick = onRefreshHdmiInputs, modifier = Modifier.weight(1f)) {
                         Text("Recarregar HDMI")
                     }
-                    TextButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
-                        Text("Fechar", color = XpYellow)
+                    Button(onClick = onReturnToKiosk, modifier = Modifier.weight(1f)) {
+                        Text("Voltar bloqueio")
                     }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
-                LauncherStatusPanel(
-                    isDefaultLauncher = isDefaultLauncher,
-                    launcherStatusMessage = launcherStatusMessage,
-                    launcherDiagnostics = launcherDiagnostics,
-                    onOpenLauncherSettings = onOpenLauncherSettings,
-                    onRefreshLauncherStatus = onRefreshLauncherStatus,
-                    onTestHomeLauncher = onTestHomeLauncher,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-                AccessibilityGuardPanel(
-                    isAccessibilityGuardEnabled = isAccessibilityGuardEnabled,
-                    accessibilityGuardMessage = accessibilityGuardMessage,
-                    accessibilityGuardDiagnostics = accessibilityGuardDiagnostics,
-                    onOpenAccessibilitySettings = onOpenAccessibilitySettings,
-                    onRefreshAccessibilityGuardStatus = onRefreshAccessibilityGuardStatus,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Editar URL, codigos e PIN", color = XpWhite)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Switch(
-                        checked = advancedEditingEnabled,
-                        onCheckedChange = { advancedEditingEnabled = it }
-                    )
-                }
-                Text(
-                    text = if (advancedEditingEnabled) {
-                        "Edicao liberada. O teclado aparece somente ao focar nos campos."
-                    } else {
-                        "Campos travados para navegar na TV sem abrir teclado automaticamente."
-                    },
-                    color = Color(0xFFB8C0CF),
-                    fontSize = 12.sp
-                )
-
-                OutlinedTextField(
-                    value = backendUrl,
-                    onValueChange = { backendUrl = it },
-                    label = { Text("URL do PDV") },
-                    readOnly = !advancedEditingEnabled,
-                    singleLine = true
-                )
-                OutlinedTextField(
-                    value = stationName,
-                    onValueChange = { stationName = it },
-                    label = { Text("Nome da estacao") },
-                    readOnly = !advancedEditingEnabled,
-                    singleLine = true
-                )
-                OutlinedTextField(
-                    value = stationId,
-                    onValueChange = { stationId = it },
-                    label = { Text("Station ID") },
-                    readOnly = !advancedEditingEnabled,
-                    singleLine = true
-                )
-                OutlinedTextField(
-                    value = deviceKey,
-                    onValueChange = { deviceKey = it },
-                    label = { Text("Device key (TV)") },
-                    readOnly = !advancedEditingEnabled,
-                    singleLine = true
-                )
-                OutlinedTextField(
-                    value = adminPin,
-                    onValueChange = { adminPin = it },
-                    label = { Text("PIN admin") },
-                    readOnly = !advancedEditingEnabled,
-                    singleLine = true
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Iniciar automatico no boot", color = XpWhite)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Switch(checked = autoStartApp, onCheckedChange = { autoStartApp = it })
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                    AdminCompactCard(
+                        title = "Guardiao",
+                        status = if (isAccessibilityGuardEnabled) "Ativo" else "Precisa ativar",
+                        isOk = isAccessibilityGuardEnabled,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            Button(
+                                onClick = onOpenAccessibilitySettings,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isAccessibilityGuardEnabled) Color(0xFF252525) else XpMagenta
+                                ),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(if (isAccessibilityGuardEnabled) "Abrir" else "Ativar")
+                            }
+                            TextButton(onClick = onRefreshAccessibilityGuardStatus, modifier = Modifier.weight(1f)) {
+                                Text("Verificar", color = XpYellow)
+                            }
+                        }
+                    }
+                    AdminCompactCard(
+                        title = "Conexao",
+                        status = stationName.ifBlank { "Estacao sem nome" },
+                        isOk = backendUrl.isNotBlank() && stationId.isNotBlank(),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Button(onClick = onTestConnection, modifier = Modifier.fillMaxWidth()) {
+                            Text("Testar")
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
                 HeroPanel(modifier = Modifier.fillMaxWidth()) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("HDMI / CEC experimental", color = XpYellow, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                        Text(
-                            "O APK tenta abrir a entrada HDMI pelo sistema da TV. Se a TV nao expor as entradas, sera necessario trocar pelo controle ou usar hardware externo.",
-                            color = Color(0xFFDDE2ED),
-                            fontSize = 13.sp,
-                            lineHeight = 18.sp
-                        )
+                        Text("HDMI do console", color = XpYellow, fontSize = 20.sp, fontWeight = FontWeight.Bold)
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("Trocar para HDMI ao liberar", color = XpWhite)
                             Spacer(modifier = Modifier.width(8.dp))
                             Switch(checked = hdmiSwitchEnabled, onCheckedChange = { hdmiSwitchEnabled = it })
                         }
-
-                        OutlinedTextField(
-                            value = consoleInputId,
-                            onValueChange = { consoleInputId = it },
-                            label = { Text("ID da entrada do console") },
-                            supportingText = { Text("Use uma entrada detectada abaixo ou cole o ID manualmente.") },
-                            readOnly = !advancedEditingEnabled,
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
+                        Text(
+                            text = selectedHdmi?.let { "Selecionada: ${it.label}" } ?: "Nenhuma HDMI selecionada",
+                            color = Color(0xFFDDE2ED),
+                            fontSize = 13.sp
                         )
 
                         if (hdmiInputs.isEmpty()) {
                             Text(
-                                "Nenhuma HDMI detectada. Clique em recarregar ou teste na TV real.",
+                                "Nenhuma HDMI detectada.",
                                 color = XpMagenta,
                                 fontSize = 13.sp
                             )
@@ -810,11 +782,14 @@ fun AdminDialog(
                         }
 
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                            Button(onClick = onRefreshHdmiInputs, modifier = Modifier.weight(1f)) {
+                                Text("Buscar HDMI")
+                            }
                             Button(onClick = { onTestHdmiInput(consoleInputId) }, modifier = Modifier.weight(1f)) {
                                 Text("Testar HDMI")
                             }
-                            TextButton(onClick = onReturnToKiosk, modifier = Modifier.weight(1f)) {
-                                Text("Voltar bloqueio", color = XpYellow)
+                            TextButton(onClick = { consoleInputId = "" }, modifier = Modifier.weight(1f)) {
+                                Text("Limpar", color = XpYellow)
                             }
                         }
 
@@ -826,18 +801,103 @@ fun AdminDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                OutlinedTextField(
-                    value = forceMinutes,
-                    onValueChange = { forceMinutes = it },
-                    label = { Text("Liberacao local de teste (min)") },
-                    singleLine = true
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                    Button(onClick = { onForceUnlock(forceMinutes.toIntOrNull() ?: 30) }) {
-                        Text("Liberar teste")
+                HeroPanel(modifier = Modifier.fillMaxWidth()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Teste local", color = XpYellow, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            listOf(15, 30, 60).forEach { minutes ->
+                                Button(
+                                    onClick = { forceMinutes = minutes },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (forceMinutes == minutes) XpMagenta else Color(0xFF252525)
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("$minutes min")
+                                }
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                            Button(onClick = { onForceUnlock(forceMinutes) }, modifier = Modifier.weight(1f)) {
+                                Text("Liberar teste")
+                            }
+                            TextButton(onClick = onEndSession, modifier = Modifier.weight(1f)) {
+                                Text("Encerrar tempo", color = XpMagenta)
+                            }
+                        }
                     }
-                    TextButton(onClick = onEndSession) {
-                        Text("Encerrar sessao", color = XpMagenta)
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                TextButton(onClick = { advancedOpen = !advancedOpen }) {
+                    Text(if (advancedOpen) "Ocultar avancado" else "Abrir avancado", color = XpYellow)
+                }
+
+                if (advancedOpen) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Iniciar automatico no boot", color = XpWhite)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Switch(checked = autoStartApp, onCheckedChange = { autoStartApp = it })
+                        }
+
+                        OutlinedTextField(
+                            value = backendUrl,
+                            onValueChange = { backendUrl = it },
+                            label = { Text("URL do PDV") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = stationName,
+                            onValueChange = { stationName = it },
+                            label = { Text("Nome da estacao") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = stationId,
+                            onValueChange = { stationId = it },
+                            label = { Text("Station ID") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = deviceKey,
+                            onValueChange = { deviceKey = it },
+                            label = { Text("Device key") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = consoleInputId,
+                            onValueChange = { consoleInputId = it },
+                            label = { Text("ID manual da HDMI") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        LauncherStatusPanel(
+                            isDefaultLauncher = isDefaultLauncher,
+                            launcherStatusMessage = launcherStatusMessage,
+                            launcherDiagnostics = launcherDiagnostics,
+                            onOpenLauncherSettings = onOpenLauncherSettings,
+                            onRefreshLauncherStatus = onRefreshLauncherStatus,
+                            onTestHomeLauncher = onTestHomeLauncher,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        if (!accessibilityGuardMessage.isNullOrBlank()) {
+                            Text(accessibilityGuardMessage, color = Color(0xFFDDE2ED), fontSize = 13.sp)
+                        }
+                        if (accessibilityGuardDiagnostics.isNotEmpty()) {
+                            Text(
+                                accessibilityGuardDiagnostics.takeLast(3).joinToString("\n"),
+                                color = Color(0xFFB8C0CF),
+                                fontSize = 11.sp,
+                                lineHeight = 14.sp
+                            )
+                        }
                     }
                 }
             }
