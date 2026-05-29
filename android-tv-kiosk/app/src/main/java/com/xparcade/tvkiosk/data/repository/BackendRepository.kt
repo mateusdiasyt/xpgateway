@@ -3,6 +3,7 @@ package com.xparcade.tvkiosk.data.repository
 import com.xparcade.tvkiosk.data.api.BackendApiService
 import com.xparcade.tvkiosk.BuildConfig
 import com.xparcade.tvkiosk.data.local.AppConfig
+import com.xparcade.tvkiosk.domain.model.AppUpdateManifest
 import com.xparcade.tvkiosk.domain.model.CreatePaymentRequest
 import com.xparcade.tvkiosk.domain.model.CreatePaymentResponse
 import com.xparcade.tvkiosk.domain.model.ForceUnlockRequest
@@ -68,6 +69,10 @@ class BackendRepository {
             getApi(config.backendUrl).healthCheck()
             true
         }.getOrDefault(false)
+    }
+
+    suspend fun getLatestAppUpdate(config: AppConfig): AppUpdateManifest {
+        return getApi(config.backendUrl).getLatestAppUpdate()
     }
 
     suspend fun getStationConfig(config: AppConfig): StationConfigResponse {

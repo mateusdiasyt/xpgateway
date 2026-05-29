@@ -2,10 +2,14 @@
 
 import android.app.Application
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import android.view.KeyEvent
+import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.xparcade.tvkiosk.BuildConfig
 import com.xparcade.tvkiosk.data.local.AppConfig
 import com.xparcade.tvkiosk.data.local.PreferencesRepository
 import com.xparcade.tvkiosk.data.local.StationPreset
@@ -22,13 +26,19 @@ import com.xparcade.tvkiosk.integration.kiosk.DefaultLauncherController
 import com.xparcade.tvkiosk.integration.kiosk.KioskLauncher
 import com.xparcade.tvkiosk.service.SessionGuardService
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.io.File
 import java.time.Instant
+import java.util.concurrent.TimeUnit
 
 class KioskViewModel(application: Application) : AndroidViewModel(application) {
     private val fixedDurationMinutes = 20
@@ -38,6 +48,10 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     private val hdmiInputController = HdmiInputController(application.applicationContext)
     private val defaultLauncherController = DefaultLauncherController(application.applicationContext)
     private val accessibilityGuardController = AccessibilityGuardController(application.applicationContext)
+    private val updateDownloadClient = OkHttpClient.Builder()
+        .connectTimeout(12, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .build()
 
     private val _uiState = MutableStateFlow(KioskUiState())
     val uiState: StateFlow<KioskUiState> = _uiState.asStateFlow()
@@ -47,6 +61,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     private var preparationJob: Job? = null
     private var pdvPollJob: Job? = null
     private var activeMonitorJob: Job? = null
+    private var appUpdateMonitorJob: Job? = null
 
     private val secretSequence = listOf(
         KeyEvent.KEYCODE_DPAD_UP,
@@ -63,12 +78,13 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         bootstrap()
+        startAppUpdateMonitor()
         refreshLauncherStatus()
         refreshAccessibilityGuardStatus()
     }
 
     fun shouldBlockBack(): Boolean {
-        return uiState.value.appState != AppState.ADMIN_MODE
+        return uiState.value.requiredAppUpdate != null || uiState.value.appState != AppState.ADMIN_MODE
     }
 
     private fun fixedOption(currentConfig: AppConfig): PricingOption {
@@ -109,6 +125,134 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
             restoreOrResetSession()
             refreshStationData()
         }
+    }
+
+    private fun startAppUpdateMonitor() {
+        if (appUpdateMonitorJob?.isActive == true) return
+
+        appUpdateMonitorJob = viewModelScope.launch {
+            delay(1500)
+            while (true) {
+                checkForAppUpdate(force = false)
+                delay(60_000)
+            }
+        }
+    }
+
+    fun checkForAppUpdate(force: Boolean) {
+        viewModelScope.launch {
+            val latest = runCatching { backendRepository.getLatestAppUpdate(config) }.getOrNull()
+
+            if (latest == null) {
+                if (force) {
+                    _uiState.update { it.copy(appUpdateStatusMessage = "Nao foi possivel verificar agora.") }
+                }
+                return@launch
+            }
+
+            if (latest.versionCode > BuildConfig.VERSION_CODE && latest.required) {
+                bringKioskToFront()
+                _uiState.update {
+                    it.copy(
+                        requiredAppUpdate = latest,
+                        appUpdateStatusMessage = "Nova versao disponivel: ${latest.versionName}.",
+                        isDownloadingAppUpdate = false
+                    )
+                }
+                return@launch
+            }
+
+            _uiState.update {
+                it.copy(
+                    requiredAppUpdate = null,
+                    appUpdateStatusMessage = if (force) "App ja esta atualizado." else it.appUpdateStatusMessage,
+                    isDownloadingAppUpdate = false
+                )
+            }
+        }
+    }
+
+    fun installRequiredAppUpdate() {
+        val update = uiState.value.requiredAppUpdate ?: return
+
+        viewModelScope.launch {
+            val context = getApplication<Application>().applicationContext
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !context.packageManager.canRequestPackageInstalls()) {
+                _uiState.update {
+                    it.copy(appUpdateStatusMessage = "Permita instalar apps desconhecidos e volte para atualizar.")
+                }
+                val settingsIntent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                    data = Uri.parse("package:${context.packageName}")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                runCatching { context.startActivity(settingsIntent) }
+                return@launch
+            }
+
+            _uiState.update {
+                it.copy(
+                    isDownloadingAppUpdate = true,
+                    appUpdateStatusMessage = "Baixando APK..."
+                )
+            }
+
+            val apkFile = runCatching { downloadUpdateApk(update.apkUrl) }.getOrElse { error ->
+                _uiState.update {
+                    it.copy(
+                        isDownloadingAppUpdate = false,
+                        appUpdateStatusMessage = "Falha ao baixar: ${error.message ?: error::class.java.simpleName}"
+                    )
+                }
+                return@launch
+            }
+
+            _uiState.update {
+                it.copy(
+                    isDownloadingAppUpdate = false,
+                    appUpdateStatusMessage = "Abrindo instalador..."
+                )
+            }
+
+            runCatching { openApkInstaller(apkFile) }.onFailure { error ->
+                _uiState.update {
+                    it.copy(appUpdateStatusMessage = "Falha ao abrir instalador: ${error.message ?: error::class.java.simpleName}")
+                }
+            }
+        }
+    }
+
+    private suspend fun downloadUpdateApk(apkUrl: String): File = withContext(Dispatchers.IO) {
+        val context = getApplication<Application>().applicationContext
+        val updateDir = File(context.getExternalFilesDir(null), "updates").apply { mkdirs() }
+        val target = File(updateDir, "xp-tv-update.apk")
+        val request = Request.Builder().url(apkUrl).build()
+        val response = updateDownloadClient.newCall(request).execute()
+
+        if (!response.isSuccessful) {
+            throw IllegalStateException("HTTP ${response.code}")
+        }
+
+        val body = response.body ?: throw IllegalStateException("Arquivo vazio")
+        target.outputStream().use { output ->
+            body.byteStream().use { input -> input.copyTo(output) }
+        }
+        target
+    }
+
+    private fun openApkInstaller(apkFile: File) {
+        val context = getApplication<Application>().applicationContext
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            apkFile
+        )
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "application/vnd.android.package-archive")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(intent)
     }
 
     fun selectInitialStation(preset: StationPreset) {

@@ -1,6 +1,7 @@
 package com.xparcade.tvkiosk.domain.state
 
 import com.xparcade.tvkiosk.domain.model.ActiveSession
+import com.xparcade.tvkiosk.domain.model.AppUpdateManifest
 import com.xparcade.tvkiosk.domain.model.CreatePaymentResponse
 import com.xparcade.tvkiosk.domain.model.PricingOption
 import com.xparcade.tvkiosk.data.local.StationPreset
@@ -33,5 +34,8 @@ data class KioskUiState(
     val launcherDiagnostics: List<String> = emptyList(),
     val isAccessibilityGuardEnabled: Boolean = false,
     val accessibilityGuardMessage: String? = null,
-    val accessibilityGuardDiagnostics: List<String> = emptyList()
+    val accessibilityGuardDiagnostics: List<String> = emptyList(),
+    val requiredAppUpdate: AppUpdateManifest? = null,
+    val appUpdateStatusMessage: String? = null,
+    val isDownloadingAppUpdate: Boolean = false
 )

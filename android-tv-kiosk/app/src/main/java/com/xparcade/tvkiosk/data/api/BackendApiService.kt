@@ -2,6 +2,7 @@ package com.xparcade.tvkiosk.data.api
 
 import com.xparcade.tvkiosk.domain.model.CreatePaymentRequest
 import com.xparcade.tvkiosk.domain.model.CreatePaymentResponse
+import com.xparcade.tvkiosk.domain.model.AppUpdateManifest
 import com.xparcade.tvkiosk.domain.model.ForceUnlockRequest
 import com.xparcade.tvkiosk.domain.model.LastPaymentWrapper
 import com.xparcade.tvkiosk.domain.model.SessionStatusResponse
@@ -18,6 +19,9 @@ interface BackendApiService {
 
     @GET("/api/health")
     suspend fun healthCheck(): Map<String, Any>
+
+    @GET("/api/tv-app/latest")
+    suspend fun getLatestAppUpdate(): AppUpdateManifest
 
     @GET("/api/stations/{stationId}/config")
     suspend fun getStationConfig(

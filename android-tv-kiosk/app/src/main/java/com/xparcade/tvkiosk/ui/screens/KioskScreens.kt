@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import com.xparcade.tvkiosk.R
 import com.xparcade.tvkiosk.data.local.AppConfig
 import com.xparcade.tvkiosk.data.local.StationPreset
+import com.xparcade.tvkiosk.domain.model.AppUpdateManifest
 import com.xparcade.tvkiosk.integration.hdmi.HdmiInputInfo
 import com.xparcade.tvkiosk.ui.theme.XpBlack
 import com.xparcade.tvkiosk.ui.theme.XpDarkGray
@@ -580,6 +581,70 @@ fun ErrorScreen(message: String, onRetry: () -> Unit) {
             Spacer(modifier = Modifier.height(18.dp))
             Button(onClick = onRetry, colors = ButtonDefaults.buttonColors(containerColor = XpYellow)) {
                 Text("Tentar novamente", color = XpBlack)
+            }
+        }
+    }
+}
+
+@Composable
+fun AppUpdateRequiredScreen(
+    update: AppUpdateManifest,
+    statusMessage: String?,
+    isDownloading: Boolean,
+    onInstall: () -> Unit,
+    onCheckAgain: () -> Unit
+) {
+    NeonBackground {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            HeroPanel(modifier = Modifier.fillMaxWidth(0.72f)) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(18.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        "Atualizacao obrigatoria",
+                        color = XpYellow,
+                        fontSize = 34.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        "Instale a versao ${update.versionName} para continuar.",
+                        color = XpWhite,
+                        fontSize = 18.sp,
+                        textAlign = TextAlign.Center
+                    )
+                    if (!statusMessage.isNullOrBlank()) {
+                        Text(
+                            statusMessage,
+                            color = Color(0xFFDDE2ED),
+                            fontSize = 14.sp,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                        Button(
+                            onClick = onInstall,
+                            enabled = !isDownloading,
+                            colors = ButtonDefaults.buttonColors(containerColor = XpMagenta),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            if (isDownloading) {
+                                CircularProgressIndicator(
+                                    color = XpWhite,
+                                    strokeWidth = 2.dp,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
+                            Text(if (isDownloading) "Baixando..." else "Instalar agora")
+                        }
+                        TextButton(onClick = onCheckAgain, enabled = !isDownloading, modifier = Modifier.weight(1f)) {
+                            Text("Verificar", color = XpYellow)
+                        }
+                    }
+                }
             }
         }
     }

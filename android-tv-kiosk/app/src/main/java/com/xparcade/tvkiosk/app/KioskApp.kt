@@ -13,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import com.xparcade.tvkiosk.domain.state.AppState
 import com.xparcade.tvkiosk.ui.screens.AdminDialog
+import com.xparcade.tvkiosk.ui.screens.AppUpdateRequiredScreen
 import com.xparcade.tvkiosk.ui.screens.ErrorScreen
 import com.xparcade.tvkiosk.ui.screens.InitialSetupScreen
 import com.xparcade.tvkiosk.ui.screens.LockScreen
@@ -130,6 +131,16 @@ fun KioskApp(viewModel: KioskViewModel) {
             onTestHomeLauncher = { viewModel.testHomeLauncher() },
             onOpenAccessibilitySettings = { viewModel.openAccessibilitySettings() },
             onRefreshAccessibilityGuardStatus = { viewModel.refreshAccessibilityGuardStatus() }
+        )
+    }
+
+    uiState.requiredAppUpdate?.let { update ->
+        AppUpdateRequiredScreen(
+            update = update,
+            statusMessage = uiState.appUpdateStatusMessage,
+            isDownloading = uiState.isDownloadingAppUpdate,
+            onInstall = { viewModel.installRequiredAppUpdate() },
+            onCheckAgain = { viewModel.checkForAppUpdate(force = true) }
         )
     }
 }
