@@ -49,9 +49,9 @@ class AccessibilityGuardController(private val context: Context) {
     fun openAccessibilitySettings(): AccessibilitySettingsResult {
         val candidates = listOf(
             SettingsCandidate(
-                label = "Configuracoes gerais",
-                intent = Intent(Settings.ACTION_SETTINGS),
-                message = "Configuracoes abertas. Entre em Sistema > Acessibilidade > XP Arcade Guardiao e ative."
+                label = "Acessibilidade",
+                intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS),
+                message = "Acessibilidade aberta. Entre em XP Arcade Guardiao e ative."
             ),
             SettingsCandidate(
                 label = "Detalhes do app",
@@ -59,7 +59,12 @@ class AccessibilityGuardController(private val context: Context) {
                     Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                     Uri.parse("package:${context.packageName}")
                 ),
-                message = "Detalhes do app abertos. Se nao houver Acessibilidade aqui, volte e procure Sistema > Acessibilidade > XP Arcade Guardiao."
+                message = "Detalhes do app abertos. Se a TV bloquear, use Permitir configuracoes restritas e depois volte em Acessibilidade."
+            ),
+            SettingsCandidate(
+                label = "Configuracoes gerais",
+                intent = Intent(Settings.ACTION_SETTINGS),
+                message = "Configuracoes abertas. Entre em Sistema > Acessibilidade > XP Arcade Guardiao e ative."
             )
         )
 

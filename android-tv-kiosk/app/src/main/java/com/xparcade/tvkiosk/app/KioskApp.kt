@@ -34,12 +34,18 @@ fun KioskApp(viewModel: KioskViewModel) {
                 isAccessibilityGuardEnabled = uiState.isAccessibilityGuardEnabled,
                 accessibilityGuardMessage = uiState.accessibilityGuardMessage,
                 accessibilityGuardDiagnostics = uiState.accessibilityGuardDiagnostics,
+                hdmiInputs = uiState.hdmiInputs,
+                hdmiStatusMessage = uiState.hdmiStatusMessage,
                 onOpenLauncherSettings = { viewModel.openDefaultLauncherSettings() },
                 onRefreshLauncherStatus = { viewModel.refreshLauncherStatus() },
                 onTestHomeLauncher = { viewModel.testHomeLauncher() },
                 onOpenAccessibilitySettings = { viewModel.openAccessibilitySettings() },
                 onRefreshAccessibilityGuardStatus = { viewModel.refreshAccessibilityGuardStatus() },
-                onSelectStation = { viewModel.selectInitialStation(it) }
+                onRefreshHdmiInputs = { viewModel.refreshHdmiInputs() },
+                onTestHdmiInput = { viewModel.testHdmiInput(it) },
+                onSelectStation = { preset, hdmiSwitchEnabled, consoleInputId ->
+                    viewModel.selectInitialStation(preset, hdmiSwitchEnabled, consoleInputId)
+                }
             )
         }
 

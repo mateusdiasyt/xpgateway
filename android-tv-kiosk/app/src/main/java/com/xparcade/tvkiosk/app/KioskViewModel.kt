@@ -79,6 +79,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     init {
         bootstrap()
         startAppUpdateMonitor()
+        refreshHdmiInputs()
         refreshLauncherStatus()
         refreshAccessibilityGuardStatus()
     }
@@ -255,13 +256,15 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         context.startActivity(intent)
     }
 
-    fun selectInitialStation(preset: StationPreset) {
+    fun selectInitialStation(preset: StationPreset, hdmiSwitchEnabled: Boolean, consoleInputId: String) {
         viewModelScope.launch {
             val normalized = config.copy(
                 isConfigured = true,
                 stationId = preset.stationId,
                 stationName = preset.stationName,
-                unlockMode = UnlockMode.PDV_ONLY
+                unlockMode = UnlockMode.PDV_ONLY,
+                hdmiSwitchEnabled = hdmiSwitchEnabled && consoleInputId.isNotBlank(),
+                consoleInputId = consoleInputId.trim()
             )
             preferencesRepository.saveConfig(normalized)
             config = normalized
@@ -994,6 +997,6 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private companion object {
-        private const val GUARDIAN_SETUP_GRACE_MS = 120_000L
+        private const val GUARDIAN_SETUP_GRACE_MS = 600_000L
     }
 }

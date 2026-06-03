@@ -284,6 +284,86 @@ private fun AccessibilityGuardPanel(
 }
 
 @Composable
+private fun HdmiSetupPanel(
+    hdmiSwitchEnabled: Boolean,
+    consoleInputId: String,
+    hdmiInputs: List<HdmiInputInfo>,
+    hdmiStatusMessage: String?,
+    onHdmiSwitchEnabledChange: (Boolean) -> Unit,
+    onConsoleInputIdChange: (String) -> Unit,
+    onRefreshHdmiInputs: () -> Unit,
+    onTestHdmiInput: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val selectedHdmi = hdmiInputs.firstOrNull { it.id == consoleInputId }
+
+    HeroPanel(modifier = modifier) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+            Text("HDMI do console", color = XpYellow, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Trocar para HDMI ao liberar", color = XpWhite)
+                Spacer(modifier = Modifier.width(8.dp))
+                Switch(checked = hdmiSwitchEnabled, onCheckedChange = onHdmiSwitchEnabledChange)
+            }
+            Text(
+                text = selectedHdmi?.let { "Selecionada: ${it.label}" } ?: "Nenhuma HDMI selecionada",
+                color = Color(0xFFDDE2ED),
+                fontSize = 13.sp
+            )
+
+            if (hdmiInputs.isEmpty()) {
+                Text(
+                    "Nenhuma HDMI detectada.",
+                    color = XpMagenta,
+                    fontSize = 13.sp
+                )
+            } else {
+                hdmiInputs.forEach { input ->
+                    Button(
+                        onClick = {
+                            onConsoleInputIdChange(input.id)
+                            onHdmiSwitchEnabledChange(true)
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (consoleInputId == input.id) XpMagenta else Color(0xFF252525)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()) {
+                            Text(input.label, color = XpWhite, fontWeight = FontWeight.Bold)
+                            Text(input.id, color = Color(0xFFB8C0CF), fontSize = 11.sp)
+                        }
+                    }
+                }
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                Button(onClick = onRefreshHdmiInputs, modifier = Modifier.weight(1f)) {
+                    Text("Buscar HDMI")
+                }
+                Button(onClick = { onTestHdmiInput(consoleInputId) }, modifier = Modifier.weight(1f)) {
+                    Text("Testar HDMI")
+                }
+                TextButton(
+                    onClick = {
+                        onConsoleInputIdChange("")
+                        onHdmiSwitchEnabledChange(false)
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Limpar", color = XpYellow)
+                }
+            }
+
+            if (!hdmiStatusMessage.isNullOrBlank()) {
+                Text(hdmiStatusMessage, color = Color(0xFFDDE2ED), fontSize = 13.sp)
+            }
+        }
+    }
+}
+
+@Composable
 fun InitialSetupScreen(
     stationPresets: List<StationPreset>,
     isDefaultLauncher: Boolean,
@@ -292,13 +372,26 @@ fun InitialSetupScreen(
     isAccessibilityGuardEnabled: Boolean,
     accessibilityGuardMessage: String?,
     accessibilityGuardDiagnostics: List<String>,
+    hdmiInputs: List<HdmiInputInfo>,
+    hdmiStatusMessage: String?,
     onOpenLauncherSettings: () -> Unit,
     onRefreshLauncherStatus: () -> Unit,
     onTestHomeLauncher: () -> Unit,
     onOpenAccessibilitySettings: () -> Unit,
     onRefreshAccessibilityGuardStatus: () -> Unit,
-    onSelectStation: (StationPreset) -> Unit
+    onRefreshHdmiInputs: () -> Unit,
+    onTestHdmiInput: (String) -> Unit,
+    onSelectStation: (StationPreset, Boolean, String) -> Unit
 ) {
+    var hdmiSwitchEnabled by remember { mutableStateOf(true) }
+    var consoleInputId by remember { mutableStateOf("") }
+
+    LaunchedEffect(hdmiInputs) {
+        if (consoleInputId.isBlank() && hdmiInputs.size == 1) {
+            consoleInputId = hdmiInputs.first().id
+        }
+    }
+
     NeonBackground {
         Column(
             modifier = Modifier
@@ -353,6 +446,19 @@ fun InitialSetupScreen(
             )
             Spacer(modifier = Modifier.height(18.dp))
 
+            HdmiSetupPanel(
+                hdmiSwitchEnabled = hdmiSwitchEnabled,
+                consoleInputId = consoleInputId,
+                hdmiInputs = hdmiInputs,
+                hdmiStatusMessage = hdmiStatusMessage,
+                onHdmiSwitchEnabledChange = { hdmiSwitchEnabled = it },
+                onConsoleInputIdChange = { consoleInputId = it },
+                onRefreshHdmiInputs = onRefreshHdmiInputs,
+                onTestHdmiInput = onTestHdmiInput,
+                modifier = Modifier.fillMaxWidth(0.72f)
+            )
+            Spacer(modifier = Modifier.height(18.dp))
+
             HeroPanel(modifier = Modifier.fillMaxWidth(0.72f)) {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -372,7 +478,7 @@ fun InitialSetupScreen(
                     ) {
                         stationPresets.forEach { preset ->
                             Button(
-                                onClick = { onSelectStation(preset) },
+                                onClick = { onSelectStation(preset, hdmiSwitchEnabled, consoleInputId) },
                                 colors = ButtonDefaults.buttonColors(containerColor = XpMagenta),
                                 modifier = Modifier
                                     .weight(1f)
