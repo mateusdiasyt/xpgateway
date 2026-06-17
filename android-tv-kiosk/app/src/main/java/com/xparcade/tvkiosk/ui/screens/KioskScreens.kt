@@ -808,11 +808,15 @@ fun AdminDialog(
     isAccessibilityGuardEnabled: Boolean,
     accessibilityGuardMessage: String?,
     accessibilityGuardDiagnostics: List<String>,
+    canDrawTimerOverlay: Boolean,
+    timerOverlayStatusMessage: String?,
     onOpenLauncherSettings: () -> Unit,
     onRefreshLauncherStatus: () -> Unit,
     onTestHomeLauncher: () -> Unit,
     onOpenAccessibilitySettings: () -> Unit,
-    onRefreshAccessibilityGuardStatus: () -> Unit
+    onRefreshAccessibilityGuardStatus: () -> Unit,
+    onOpenTimerOverlaySettings: () -> Unit,
+    onRefreshTimerOverlayStatus: () -> Unit
 ) {
     var stationName by remember { mutableStateOf(currentConfig.stationName) }
     var stationId by remember { mutableStateOf(currentConfig.stationId) }
@@ -909,6 +913,27 @@ fun AdminDialog(
                     ) {
                         Button(onClick = onTestConnection, modifier = Modifier.fillMaxWidth()) {
                             Text("Testar")
+                        }
+                    }
+                    AdminCompactCard(
+                        title = "Tempo no jogo",
+                        status = timerOverlayStatusMessage ?: "Verifique a permissao.",
+                        isOk = canDrawTimerOverlay,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            Button(
+                                onClick = onOpenTimerOverlaySettings,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (canDrawTimerOverlay) Color(0xFF252525) else XpMagenta
+                                ),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(if (canDrawTimerOverlay) "Abrir" else "Permitir")
+                            }
+                            TextButton(onClick = onRefreshTimerOverlayStatus, modifier = Modifier.weight(1f)) {
+                                Text("Verificar", color = XpYellow)
+                            }
                         }
                     }
                 }

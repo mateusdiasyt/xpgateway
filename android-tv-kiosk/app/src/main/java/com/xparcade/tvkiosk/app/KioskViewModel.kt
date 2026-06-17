@@ -24,6 +24,7 @@ import com.xparcade.tvkiosk.integration.hdmi.HdmiInputController
 import com.xparcade.tvkiosk.integration.kiosk.AccessibilityGuardController
 import com.xparcade.tvkiosk.integration.kiosk.DefaultLauncherController
 import com.xparcade.tvkiosk.integration.kiosk.KioskLauncher
+import com.xparcade.tvkiosk.integration.overlay.TimerOverlayManager
 import com.xparcade.tvkiosk.service.SessionGuardService
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
@@ -82,6 +83,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         refreshHdmiInputs()
         refreshLauncherStatus()
         refreshAccessibilityGuardStatus()
+        refreshTimerOverlayStatus()
     }
 
     fun shouldBlockBack(): Boolean {
@@ -851,6 +853,34 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                 },
                 accessibilityGuardDiagnostics = status.diagnostics
             )
+        }
+    }
+
+    fun refreshTimerOverlayStatus() {
+        val context = getApplication<Application>().applicationContext
+        val canDraw = TimerOverlayManager.canDrawOverlays(context)
+        _uiState.update {
+            it.copy(
+                canDrawTimerOverlay = canDraw,
+                timerOverlayStatusMessage = if (canDraw) {
+                    "Tempo sobre o jogo liberado."
+                } else {
+                    "Permita sobrepor a outros apps para exibir o tempo no jogo."
+                }
+            )
+        }
+    }
+
+    fun openTimerOverlaySettings() {
+        val context = getApplication<Application>().applicationContext
+        runCatching {
+            context.startActivity(TimerOverlayManager.buildSettingsIntent(context))
+        }.onFailure { error ->
+            _uiState.update {
+                it.copy(
+                    timerOverlayStatusMessage = "Nao foi possivel abrir a permissao: ${error.message ?: error::class.java.simpleName}"
+                )
+            }
         }
     }
 

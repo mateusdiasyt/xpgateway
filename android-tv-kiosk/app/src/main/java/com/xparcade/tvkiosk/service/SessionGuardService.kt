@@ -12,6 +12,7 @@ import com.xparcade.tvkiosk.R
 import com.xparcade.tvkiosk.data.local.AppConfig
 import com.xparcade.tvkiosk.data.repository.BackendRepository
 import com.xparcade.tvkiosk.integration.kiosk.KioskLauncher
+import com.xparcade.tvkiosk.integration.overlay.TimerOverlayManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -22,6 +23,7 @@ import kotlinx.coroutines.launch
 class SessionGuardService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val backendRepository = BackendRepository()
+    private val timerOverlayManager by lazy { TimerOverlayManager(applicationContext) }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -42,6 +44,7 @@ class SessionGuardService : Service() {
         }
 
         startForeground(NOTIFICATION_ID, buildNotification(config.stationName.ifBlank { config.stationId }))
+        timerOverlayManager.updateRemaining(secondsUntil(expiresAt))
         scope.launch {
             monitorSession(expiresAt, config)
         }
@@ -50,6 +53,7 @@ class SessionGuardService : Service() {
     }
 
     override fun onDestroy() {
+        timerOverlayManager.hide()
         scope.cancel()
         super.onDestroy()
     }
@@ -64,6 +68,8 @@ class SessionGuardService : Service() {
                 openKioskAndStop()
                 return
             }
+
+            timerOverlayManager.updateRemaining(secondsUntil(expiresAt, now))
 
             if (now >= nextServerCheckAt) {
                 val remoteStatus = runCatching { backendRepository.getTvStatus(config) }.getOrNull()
@@ -85,8 +91,13 @@ class SessionGuardService : Service() {
     }
 
     private fun openKioskAndStop() {
+        timerOverlayManager.hide()
         KioskLauncher.bringToFront(this)
         stopSelf()
+    }
+
+    private fun secondsUntil(expiresAt: Long, now: Long = System.currentTimeMillis()): Long {
+        return ((expiresAt - now + 999L) / 1000L).coerceAtLeast(0)
     }
 
     private fun buildNotification(stationName: String): Notification {

@@ -132,11 +132,15 @@ fun KioskApp(viewModel: KioskViewModel) {
             isAccessibilityGuardEnabled = uiState.isAccessibilityGuardEnabled,
             accessibilityGuardMessage = uiState.accessibilityGuardMessage,
             accessibilityGuardDiagnostics = uiState.accessibilityGuardDiagnostics,
+            canDrawTimerOverlay = uiState.canDrawTimerOverlay,
+            timerOverlayStatusMessage = uiState.timerOverlayStatusMessage,
             onOpenLauncherSettings = { viewModel.openDefaultLauncherSettings() },
             onRefreshLauncherStatus = { viewModel.refreshLauncherStatus() },
             onTestHomeLauncher = { viewModel.testHomeLauncher() },
             onOpenAccessibilitySettings = { viewModel.openAccessibilitySettings() },
-            onRefreshAccessibilityGuardStatus = { viewModel.refreshAccessibilityGuardStatus() }
+            onRefreshAccessibilityGuardStatus = { viewModel.refreshAccessibilityGuardStatus() },
+            onOpenTimerOverlaySettings = { viewModel.openTimerOverlaySettings() },
+            onRefreshTimerOverlayStatus = { viewModel.refreshTimerOverlayStatus() }
         )
     }
 

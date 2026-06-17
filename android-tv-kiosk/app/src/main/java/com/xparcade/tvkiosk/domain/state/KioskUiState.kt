@@ -35,6 +35,8 @@ data class KioskUiState(
     val isAccessibilityGuardEnabled: Boolean = false,
     val accessibilityGuardMessage: String? = null,
     val accessibilityGuardDiagnostics: List<String> = emptyList(),
+    val canDrawTimerOverlay: Boolean = false,
+    val timerOverlayStatusMessage: String? = null,
     val requiredAppUpdate: AppUpdateManifest? = null,
     val appUpdateStatusMessage: String? = null,
     val isDownloadingAppUpdate: Boolean = false
