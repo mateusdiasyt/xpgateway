@@ -144,6 +144,17 @@ private fun HeroPanel(modifier: Modifier = Modifier, content: @Composable () -> 
 }
 
 @Composable
+private fun ConfigureDeviceButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Button(
+        onClick = onClick,
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF252525)),
+        modifier = modifier
+    ) {
+        Text("Configurar dispositivo", color = XpWhite, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
 private fun LauncherStatusPanel(
     isDefaultLauncher: Boolean,
     launcherStatusMessage: String?,
@@ -550,75 +561,187 @@ fun PreparationScreen(
     }
 }
 
+
 @Composable
-fun LockScreen(stationName: String, backendOnline: Boolean, waitingMessage: String, lastPaymentSummary: String?) {
+fun PairingRequiredScreen(
+    pairingCode: String,
+    pairingMessage: String?,
+    isPairing: Boolean,
+    onCodeChange: (String) -> Unit,
+    onPair: () -> Unit,
+    onCheckAgain: () -> Unit,
+    onConfigureDevice: () -> Unit
+) {
     NeonBackground {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.xp_logo_transparent),
-                contentDescription = "XP Arcade Logo",
+        Box(modifier = Modifier.fillMaxSize()) {
+            ConfigureDeviceButton(
+                onClick = onConfigureDevice,
                 modifier = Modifier
-                    .fillMaxWidth(0.48f)
-                    .height(118.dp)
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            StationBadge(stationName = stationName)
-
-            Spacer(modifier = Modifier.height(28.dp))
-            Text(
-                text = "COMO JOGAR",
-                color = Color(0xFFC8CBD3),
-                fontSize = 14.sp,
-                letterSpacing = 2.8.sp
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = "Para jogar aqui é necessário ir até o caixa realizar o pagamento.",
-                color = XpWhite,
-                fontSize = 34.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                lineHeight = 42.sp
+                    .align(Alignment.TopEnd)
+                    .padding(24.dp)
             )
 
-            Spacer(modifier = Modifier.height(26.dp))
-
-            HeroPanel(modifier = Modifier.fillMaxWidth(0.76f)) {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    horizontalAlignment = Alignment.Start,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = "PASSO A PASSO",
-                        color = Color(0xFF9EA5B2),
-                        fontSize = 14.sp,
-                        letterSpacing = 2.2.sp
-                    )
-                    Text("1. Vá até o caixa.", color = XpWhite, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
-                    Text("2. Informe a estação ${stationName.uppercase()}.", color = XpWhite, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
-                    Text("3. Após o pagamento, a liberação será automática.", color = XpWhite, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
-
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(color = XpMagenta, strokeWidth = 3.dp, modifier = Modifier.size(26.dp))
-                        Spacer(modifier = Modifier.width(10.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 54.dp, vertical = 42.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                HeroPanel(modifier = Modifier.fillMaxWidth(0.72f)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(18.dp), modifier = Modifier.fillMaxWidth()) {
                         Text(
-                            text = if (backendOnline) waitingMessage else "Sem conexão com servidor. Chame um atendente.",
-                            color = if (backendOnline) Color(0xFFDDE2ED) else XpMagenta,
-                            fontSize = 18.sp
+                            text = "PAREAR TV",
+                            color = XpYellow,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 2.4.sp
                         )
+                        Text(
+                            text = "Conecte esta TV ao PDV",
+                            color = XpWhite,
+                            fontSize = 34.sp,
+                            fontWeight = FontWeight.Black,
+                            lineHeight = 38.sp
+                        )
+                        Text(
+                            text = pairingMessage ?: "No painel do Mendoza PDV, abra App da TV, gere um codigo de pareamento e digite aqui.",
+                            color = Color(0xFFDDE2ED),
+                            fontSize = 17.sp,
+                            lineHeight = 23.sp
+                        )
+
+                        OutlinedTextField(
+                            value = pairingCode,
+                            onValueChange = onCodeChange,
+                            label = { Text("Codigo de pareamento") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                            Button(
+                                onClick = onPair,
+                                enabled = !isPairing && pairingCode.length >= 4,
+                                colors = ButtonDefaults.buttonColors(containerColor = XpYellow),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                if (isPairing) {
+                                    CircularProgressIndicator(modifier = Modifier.size(18.dp), color = XpBlack, strokeWidth = 2.dp)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                }
+                                Text("Parear TV", color = XpBlack, fontWeight = FontWeight.ExtraBold)
+                            }
+                            TextButton(onClick = onCheckAgain, modifier = Modifier.weight(1f)) {
+                                Text("Verificar novamente", color = XpYellow)
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xAA050505), RoundedCornerShape(16.dp))
+                                .border(1.dp, Color(0x33E0B72D), RoundedCornerShape(16.dp))
+                                .padding(14.dp)
+                        ) {
+                            Text(
+                                text = "Depois de parear, esta TV fica presa somente ao PDV selecionado. Se trocar de cliente ou reinstalar, gere um novo codigo.",
+                                color = Color(0xFFB8C0CF),
+                                fontSize = 13.sp,
+                                lineHeight = 18.sp
+                            )
+                        }
                     }
                 }
             }
+        }
+    }
+}
 
-            if (!lastPaymentSummary.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(10.dp))
-                Text(lastPaymentSummary, color = Color(0xFF8E95A3), fontSize = 13.sp)
+@Composable
+fun LockScreen(
+    stationName: String,
+    backendOnline: Boolean,
+    waitingMessage: String,
+    lastPaymentSummary: String?,
+    onConfigureDevice: () -> Unit
+) {
+    NeonBackground {
+        Box(modifier = Modifier.fillMaxSize()) {
+            ConfigureDeviceButton(
+                onClick = onConfigureDevice,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(24.dp)
+            )
+
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.xp_logo_transparent),
+                    contentDescription = "XP Arcade Logo",
+                    modifier = Modifier
+                        .fillMaxWidth(0.48f)
+                        .height(118.dp)
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                StationBadge(stationName = stationName)
+
+                Spacer(modifier = Modifier.height(28.dp))
+                Text(
+                    text = "COMO JOGAR",
+                    color = Color(0xFFC8CBD3),
+                    fontSize = 14.sp,
+                    letterSpacing = 2.8.sp
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "Para jogar aqui é necessário ir até o caixa realizar o pagamento.",
+                    color = XpWhite,
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 42.sp
+                )
+
+                Spacer(modifier = Modifier.height(26.dp))
+
+                HeroPanel(modifier = Modifier.fillMaxWidth(0.76f)) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalAlignment = Alignment.Start,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "PASSO A PASSO",
+                            color = Color(0xFF9EA5B2),
+                            fontSize = 14.sp,
+                            letterSpacing = 2.2.sp
+                        )
+                        Text("1. Vá até o caixa.", color = XpWhite, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+                        Text("2. Informe a estação ${stationName.uppercase()}.", color = XpWhite, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+                        Text("3. Após o pagamento, a liberação será automática.", color = XpWhite, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(color = XpMagenta, strokeWidth = 3.dp, modifier = Modifier.size(26.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = if (backendOnline) waitingMessage else "Sem conexão com servidor. Chame um atendente.",
+                                color = if (backendOnline) Color(0xFFDDE2ED) else XpMagenta,
+                                fontSize = 18.sp
+                            )
+                        }
+                    }
+                }
+
+                if (!lastPaymentSummary.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(lastPaymentSummary, color = Color(0xFF8E95A3), fontSize = 13.sp)
+                }
             }
         }
     }
@@ -627,46 +750,56 @@ fun LockScreen(stationName: String, backendOnline: Boolean, waitingMessage: Stri
 @Composable
 fun SessionActiveScreen(
     stationName: String,
-    warning: String?
+    warning: String?,
+    onConfigureDevice: () -> Unit
 ) {
     NeonBackground {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            HeroPanel(modifier = Modifier.fillMaxWidth(0.72f)) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                    Text("HDMI LIBERADA", color = XpYellow, fontSize = 56.sp, fontWeight = FontWeight.ExtraBold)
-                    Spacer(modifier = Modifier.height(10.dp))
-                    StationBadge(stationName = stationName)
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Text(
-                        "Jogue pela entrada HDMI. O tempo fica sendo controlado no PDV.",
-                        color = Color(0xFFE1E5EF),
-                        fontSize = 24.sp,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 31.sp
-                    )
-                    Spacer(modifier = Modifier.height(14.dp))
-                    Text(
-                        "Se esta tela ainda aparecer, altere a fonte para HDMI pelo controle.",
-                        color = Color(0xFFB8C0CF),
-                        fontSize = 18.sp,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
+        Box(modifier = Modifier.fillMaxSize()) {
+            ConfigureDeviceButton(
+                onClick = onConfigureDevice,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(24.dp)
+            )
 
-            if (!warning.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(18.dp))
-                Box(
-                    modifier = Modifier
-                        .background(Color(0xAA111111), shape = MaterialTheme.shapes.medium)
-                        .border(1.dp, Color(0x88FF005C), MaterialTheme.shapes.medium)
-                        .padding(horizontal = 20.dp, vertical = 11.dp)
-                ) {
-                    Text(warning, color = XpMagenta, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                HeroPanel(modifier = Modifier.fillMaxWidth(0.72f)) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                        Text("HDMI LIBERADA", color = XpYellow, fontSize = 56.sp, fontWeight = FontWeight.ExtraBold)
+                        Spacer(modifier = Modifier.height(10.dp))
+                        StationBadge(stationName = stationName)
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Text(
+                            "Jogue pela entrada HDMI. O tempo fica sendo controlado no PDV.",
+                            color = Color(0xFFE1E5EF),
+                            fontSize = 24.sp,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 31.sp
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Text(
+                            "Se esta tela ainda aparecer, altere a fonte para HDMI pelo controle.",
+                            color = Color(0xFFB8C0CF),
+                            fontSize = 18.sp,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+
+                if (!warning.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(18.dp))
+                    Box(
+                        modifier = Modifier
+                            .background(Color(0xAA111111), shape = MaterialTheme.shapes.medium)
+                            .border(1.dp, Color(0x88FF005C), MaterialTheme.shapes.medium)
+                            .padding(horizontal = 20.dp, vertical = 11.dp)
+                    ) {
+                        Text(warning, color = XpMagenta, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }

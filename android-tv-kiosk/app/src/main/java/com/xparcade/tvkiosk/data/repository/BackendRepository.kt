@@ -1,7 +1,6 @@
 package com.xparcade.tvkiosk.data.repository
 
 import com.xparcade.tvkiosk.data.api.BackendApiService
-import com.xparcade.tvkiosk.BuildConfig
 import com.xparcade.tvkiosk.data.local.AppConfig
 import com.xparcade.tvkiosk.domain.model.AppUpdateManifest
 import com.xparcade.tvkiosk.domain.model.CreatePaymentRequest
@@ -9,12 +8,13 @@ import com.xparcade.tvkiosk.domain.model.CreatePaymentResponse
 import com.xparcade.tvkiosk.domain.model.ForceUnlockRequest
 import com.xparcade.tvkiosk.domain.model.SessionStatusResponse
 import com.xparcade.tvkiosk.domain.model.StationConfigResponse
+import com.xparcade.tvkiosk.domain.model.PairTvDeviceRequest
+import com.xparcade.tvkiosk.domain.model.PairTvDeviceResponse
 import com.xparcade.tvkiosk.domain.model.TvStatusResponse
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.HttpException
 import java.util.concurrent.TimeUnit
 
 class BackendRepository {
@@ -30,10 +30,7 @@ class BackendRepository {
         return if (trimmed.endsWith("/")) trimmed else "$trimmed/"
     }
 
-    private fun resolveDeviceKey(config: AppConfig): String {
-        val candidate = config.deviceKey.trim()
-        return if (candidate.isNotBlank()) candidate else config.stationToken
-    }
+    private fun resolveDeviceToken(config: AppConfig): String = config.deviceKey.trim()
 
     private fun getApi(baseUrl: String): BackendApiService {
         val normalized = normalizeBaseUrl(baseUrl)
@@ -114,29 +111,25 @@ class BackendRepository {
     }
 
     suspend fun getTvStatus(config: AppConfig): TvStatusResponse {
-        val api = getApi(config.backendUrl)
-        val configuredDeviceKey = resolveDeviceKey(config)
+        return getApi(config.backendUrl).getTvStatus(
+            stationId = config.stationId,
+            deviceToken = resolveDeviceToken(config)
+        )
+    }
 
-        return runCatching {
-            api.getTvStatus(
-                stationId = config.stationId,
-                deviceKey = configuredDeviceKey
+    suspend fun pairTvDevice(
+        config: AppConfig,
+        pairingCode: String,
+        deviceName: String?
+    ): PairTvDeviceResponse {
+        return getApi(config.backendUrl).pairTvDevice(
+            PairTvDeviceRequest(
+                pairingCode = pairingCode.filter { it.isDigit() },
+                deviceName = deviceName?.trim()?.takeIf { it.isNotBlank() },
+                appVersionCode = com.xparcade.tvkiosk.BuildConfig.VERSION_CODE,
+                appVersionName = com.xparcade.tvkiosk.BuildConfig.VERSION_NAME
             )
-        }.recoverCatching { error ->
-            val defaultDeviceKey = BuildConfig.DEFAULT_DEVICE_KEY
-            val shouldRetryWithBundledKey =
-                configuredDeviceKey != defaultDeviceKey &&
-                    (error !is HttpException || error.code() == 401 || error.code() == 403)
-
-            if (!shouldRetryWithBundledKey) {
-                throw error
-            }
-
-            api.getTvStatus(
-                stationId = config.stationId,
-                deviceKey = defaultDeviceKey
-            )
-        }.getOrThrow()
+        )
     }
 
     suspend fun forceUnlock(config: AppConfig, durationMinutes: Int): Map<String, Any> {

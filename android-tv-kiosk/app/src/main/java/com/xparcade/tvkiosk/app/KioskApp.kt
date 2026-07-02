@@ -17,6 +17,7 @@ import com.xparcade.tvkiosk.ui.screens.AppUpdateRequiredScreen
 import com.xparcade.tvkiosk.ui.screens.ErrorScreen
 import com.xparcade.tvkiosk.ui.screens.InitialSetupScreen
 import com.xparcade.tvkiosk.ui.screens.LockScreen
+import com.xparcade.tvkiosk.ui.screens.PairingRequiredScreen
 import com.xparcade.tvkiosk.ui.screens.PreparationScreen
 import com.xparcade.tvkiosk.ui.screens.SessionActiveScreen
 
@@ -25,6 +26,18 @@ fun KioskApp(viewModel: KioskViewModel) {
     val uiState by viewModel.uiState.collectAsState()
 
     when (uiState.appState) {
+        AppState.PAIRING_REQUIRED -> {
+            PairingRequiredScreen(
+                pairingCode = uiState.pairingCode,
+                pairingMessage = uiState.pairingMessage,
+                isPairing = uiState.isPairing,
+                onCodeChange = { viewModel.updatePairingCode(it) },
+                onPair = { viewModel.submitPairingCode() },
+                onCheckAgain = { viewModel.refreshStationData() },
+                onConfigureDevice = { viewModel.showAdminPinPrompt() }
+            )
+        }
+
         AppState.INITIAL_SETUP -> {
             InitialSetupScreen(
                 stationPresets = uiState.stationPresets,
@@ -61,7 +74,8 @@ fun KioskApp(viewModel: KioskViewModel) {
         AppState.PAYMENT_PAID -> {
             SessionActiveScreen(
                 stationName = uiState.stationName,
-                warning = uiState.warningMessage
+                warning = uiState.warningMessage,
+                onConfigureDevice = { viewModel.showAdminPinPrompt() }
             )
         }
 
@@ -78,6 +92,7 @@ fun KioskApp(viewModel: KioskViewModel) {
                 backendOnline = uiState.backendOnline,
                 waitingMessage = uiState.paymentStatusMessage,
                 lastPaymentSummary = uiState.lastPaymentSummary,
+                onConfigureDevice = { viewModel.showAdminPinPrompt() }
             )
         }
     }

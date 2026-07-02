@@ -27,15 +27,37 @@ data class LastPaymentResponse(
 )
 
 data class TvStatusResponse(
-    val stationId: String,
-    val status: String,
-    val saleId: String?,
-    val planCode: String?,
-    val unlockedUntil: String?,
-    val releasedUntil: String?,
-    val serviceStartsAt: String?,
-    val preparationEndsAt: String?,
-    val preparationRemainingSeconds: Long?,
-    val remainingSeconds: Long,
-    val serverTime: String
+    val stationId: String? = null,
+    val status: String = "LOCKED",
+    val saleId: String? = null,
+    val planCode: String? = null,
+    val unlockedUntil: String? = null,
+    val releasedUntil: String? = null,
+    val serviceStartsAt: String? = null,
+    val preparationEndsAt: String? = null,
+    val preparationRemainingSeconds: Long? = null,
+    val remainingSeconds: Long = 0,
+    val serverTime: String = "",
+    val requiresPairing: Boolean = false,
+    val pairingUrl: String? = null,
+    val adminPin: String? = null,
+    val message: String? = null
+)
+
+data class PairTvDeviceRequest(
+    val pairingCode: String,
+    val deviceName: String? = null,
+    val appVersionCode: Int,
+    val appVersionName: String
+)
+
+data class PairTvDeviceResponse(
+    val status: String = "ERROR",
+    val deviceToken: String? = null,
+    val stationId: String? = null,
+    val label: String? = null,
+    val tenantSlug: String? = null,
+    val tenantName: String? = null,
+    val adminPin: String? = null,
+    val message: String? = null
 )

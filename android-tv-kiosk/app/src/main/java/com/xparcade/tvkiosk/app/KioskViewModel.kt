@@ -37,6 +37,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import retrofit2.HttpException
 import java.io.File
 import java.time.Instant
 import java.util.concurrent.TimeUnit
@@ -102,23 +103,15 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             config = preferencesRepository.getConfig().copy(unlockMode = UnlockMode.PDV_ONLY)
 
-            if (!config.isConfigured) {
-                _uiState.update {
-                    it.copy(
-                        stationName = "XP Arcade",
-                        stationPresets = StationPresets.all,
-                        unlockMode = UnlockMode.PDV_ONLY,
-                        paymentStatusMessage = "Selecione a TV para iniciar.",
-                        appState = AppState.INITIAL_SETUP
-                    )
-                }
+            if (requiresPairing(config)) {
+                enterPairingMode("Digite o codigo gerado no painel para vincular esta TV ao PDV.")
                 return@launch
             }
 
             _uiState.update {
                 it.copy(
-                    stationName = config.stationName,
-                    stationPresets = StationPresets.all,
+                    stationName = config.stationName.ifBlank { "Mendoza PDV" },
+                    stationPresets = emptyList(),
                     unlockMode = UnlockMode.PDV_ONLY,
                     paymentStatusMessage = "Aguardando liberacao pelo caixa...",
                     appState = AppState.IDLE
@@ -127,6 +120,50 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
 
             restoreOrResetSession()
             refreshStationData()
+        }
+    }
+
+    private fun requiresPairing(current: AppConfig): Boolean {
+        return !current.isConfigured || current.deviceKey.isBlank() || current.stationId.isBlank()
+    }
+
+    private fun normalizeRemoteAdminPin(value: String?): String? {
+        val pin = value?.filter { it.isDigit() }?.take(8).orEmpty()
+        return pin.takeIf { it.length >= 4 }
+    }
+
+    private suspend fun syncAdminPin(remoteAdminPin: String?) {
+        val nextPin = normalizeRemoteAdminPin(remoteAdminPin) ?: return
+        if (nextPin == config.adminPin) return
+
+        val normalized = config.copy(adminPin = nextPin)
+        preferencesRepository.saveConfig(normalized)
+        config = normalized
+    }
+
+    private suspend fun enterPairingMode(message: String? = null) {
+        stopPdvPolling()
+        stopActiveSessionMonitor()
+        stopPreparationCountdown()
+        stopSessionGuard()
+        preferencesRepository.clearPairing()
+        config = preferencesRepository.getConfig().copy(unlockMode = UnlockMode.PDV_ONLY)
+        _uiState.update {
+            it.copy(
+                isLoading = false,
+                isPairing = false,
+                stationName = "Mendoza PDV",
+                stationPresets = emptyList(),
+                pricingOptions = emptyList(),
+                selectedOption = null,
+                payment = null,
+                activeSession = null,
+                remainingSeconds = 0,
+                preparationRemainingSeconds = 0,
+                appState = AppState.PAIRING_REQUIRED,
+                pairingMessage = message ?: "Pareamento obrigatorio. Gere um codigo no painel e digite aqui.",
+                paymentStatusMessage = "Pareamento obrigatorio."
+            )
         }
     }
 
@@ -283,6 +320,68 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun updatePairingCode(value: String) {
+        val onlyDigits = value.filter { it.isDigit() }.take(8)
+        _uiState.update { it.copy(pairingCode = onlyDigits, pairingMessage = null) }
+    }
+
+    fun submitPairingCode() {
+        viewModelScope.launch {
+            val code = uiState.value.pairingCode.filter { it.isDigit() }
+            if (code.length < 4) {
+                _uiState.update { it.copy(pairingMessage = "Digite o codigo de pareamento completo.") }
+                return@launch
+            }
+
+            _uiState.update { it.copy(isPairing = true, pairingMessage = "Pareando TV...") }
+            runCatching { backendRepository.pairTvDevice(config, code, null) }
+                .onSuccess { paired ->
+                    val deviceToken = paired.deviceToken.orEmpty()
+                    val stationId = paired.stationId.orEmpty()
+                    if (deviceToken.isBlank() || stationId.isBlank()) {
+                        _uiState.update {
+                            it.copy(
+                                isPairing = false,
+                                pairingMessage = "O codigo foi aceito, mas o servidor nao retornou o token da TV. Gere outro codigo."
+                            )
+                        }
+                        return@onSuccess
+                    }
+
+                    val normalized = config.copy(
+                        isConfigured = true,
+                        stationId = stationId,
+                        stationName = paired.label ?: stationId,
+                        stationToken = "",
+                        deviceKey = deviceToken,
+                        adminPin = normalizeRemoteAdminPin(paired.adminPin) ?: config.adminPin,
+                        unlockMode = UnlockMode.PDV_ONLY
+                    )
+                    preferencesRepository.saveConfig(normalized)
+                    config = normalized
+                    _uiState.update {
+                        it.copy(
+                            isPairing = false,
+                            pairingCode = "",
+                            pairingMessage = "TV pareada com sucesso. Carregando controle...",
+                            stationName = normalized.stationName,
+                            appState = AppState.IDLE
+                        )
+                    }
+                    restoreOrResetSession()
+                    refreshStationData()
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(
+                            isPairing = false,
+                            pairingMessage = error.message ?: "Nao foi possivel parear. Confira o codigo e tente novamente."
+                        )
+                    }
+                }
+        }
+    }
+
     fun retryFromError() {
         viewModelScope.launch {
             _uiState.update { it.copy(errorMessage = null, appState = AppState.IDLE) }
@@ -301,16 +400,8 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
 
             config = preferencesRepository.getConfig().copy(unlockMode = UnlockMode.PDV_ONLY)
 
-            if (!config.isConfigured) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        stationName = "XP Arcade",
-                        stationPresets = StationPresets.all,
-                        appState = AppState.INITIAL_SETUP,
-                        paymentStatusMessage = "Selecione a TV para iniciar."
-                    )
-                }
+            if (requiresPairing(config)) {
+                enterPairingMode("Esta TV precisa ser pareada com este PDV antes de continuar.")
                 return@launch
             }
 
@@ -368,6 +459,10 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun ensureUnlockFlow() {
+        if (requiresPairing(config)) {
+            viewModelScope.launch { enterPairingMode("Esta TV precisa ser pareada com este PDV antes de continuar.") }
+            return
+        }
         startPdvPolling()
         _uiState.update {
             it.copy(
@@ -400,9 +495,15 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
 
         pdvPollJob = viewModelScope.launch {
             while (true) {
-                val result = runCatching { backendRepository.getTvStatus(config) }
+                try {
+                    val tvStatus = backendRepository.getTvStatus(config)
+                    syncAdminPin(tvStatus.adminPin)
 
-                result.onSuccess { tvStatus ->
+                    if (tvStatus.requiresPairing || tvStatus.status.equals("PAIRING_REQUIRED", true)) {
+                        enterPairingMode(tvStatus.message ?: "Esta TV precisa ser pareada novamente.")
+                        return@launch
+                    }
+
                     val isPreparingStatus = tvStatus.status.equals("PREPARING", true)
                     val isActiveStatus =
                         tvStatus.status.equals("ACTIVE", true) ||
@@ -448,22 +549,30 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                             return@launch
                         } else {
                             _uiState.update {
-                                it.copy(paymentStatusMessage = "PDV retornou ACTIVE, mas o tempo ja esta zerado.")
+                                it.copy(paymentStatusMessage = "PDV retornou sem tempo restante. Aguardando nova liberacao...")
                             }
                         }
                     } else {
+                        val active = uiState.value.activeSession
+                        if (active != null && active.source == "pdv") {
+                            handleRemoteSessionEnded("Tempo encerrado pelo caixa.")
+                        }
                         _uiState.update {
-                            it.copy(paymentStatusMessage = "Status PDV: ${tvStatus.status}. Aguardando liberacao pelo caixa...")
+                            it.copy(paymentStatusMessage = "Aguardando liberacao pelo caixa...")
                         }
                     }
-                }.onFailure {
-                    val message = it.message?.takeIf { text -> text.isNotBlank() } ?: it::class.java.simpleName
+                } catch (error: Throwable) {
+                    val httpError = error as? HttpException
+                    if (httpError?.code() == 401 || httpError?.code() == 403) {
+                        enterPairingMode("Esta TV precisa ser pareada novamente com o PDV.")
+                        return@launch
+                    }
                     _uiState.update {
-                        it.copy(paymentStatusMessage = "Falha ao consultar PDV: $message. Chame um atendente.")
+                        it.copy(paymentStatusMessage = "Sem conexao com o PDV. Tentando novamente...")
                     }
                 }
 
-                delay(3000)
+                delay(5_000)
             }
         }
     }
@@ -572,6 +681,8 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                 val result = runCatching { backendRepository.getTvStatus(config) }
 
                 result.onSuccess { tvStatus ->
+                    syncAdminPin(tvStatus.adminPin)
+
                     val isPreparingStatus = tvStatus.status.equals("PREPARING", true)
                     val isActiveStatus =
                         tvStatus.status.equals("ACTIVE", true) ||
@@ -968,8 +1079,17 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun showAdminPinPrompt() {
+        _uiState.update {
+            it.copy(
+                isAdminPinPromptVisible = true,
+                adminPinError = null
+            )
+        }
+    }
+
     fun submitAdminPin(pin: String) {
-        if (pin == config.adminPin) {
+        if (pin.filter { it.isDigit() } == config.adminPin) {
             _uiState.update {
                 it.copy(
                     isAdminPinPromptVisible = false,

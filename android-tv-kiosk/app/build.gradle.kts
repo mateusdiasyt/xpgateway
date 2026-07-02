@@ -11,19 +11,19 @@ android {
         applicationId = "com.xparcade.tvkiosk"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "0.1.5"
+        versionCode = 10
+        versionName = "0.1.9"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
 
-        buildConfigField("String", "DEFAULT_BACKEND_URL", "\"https://xp-pdv.vercel.app\"")
-        buildConfigField("String", "DEFAULT_STATION_ID", "\"tv-01\"")
-        buildConfigField("String", "DEFAULT_STATION_NAME", "\"TV 01 - PS5\"")
-        buildConfigField("String", "DEFAULT_STATION_TOKEN", "\"pdv-only\"")
-        buildConfigField("String", "DEFAULT_DEVICE_KEY", "\"dvlGZIeWdYu2eHih0k7hS7jauBHk0lCgD4WVlqlVu6Q=\"")
+        buildConfigField("String", "DEFAULT_BACKEND_URL", "\"https://www.mendozapdv.com.br\"")
+        buildConfigField("String", "DEFAULT_STATION_ID", "\"\"")
+        buildConfigField("String", "DEFAULT_STATION_NAME", "\"\"")
+        buildConfigField("String", "DEFAULT_STATION_TOKEN", "\"\"")
+        buildConfigField("String", "DEFAULT_DEVICE_KEY", "\"\"")
     }
 
     buildTypes {

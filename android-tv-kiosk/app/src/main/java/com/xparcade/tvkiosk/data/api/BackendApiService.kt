@@ -5,6 +5,8 @@ import com.xparcade.tvkiosk.domain.model.CreatePaymentResponse
 import com.xparcade.tvkiosk.domain.model.AppUpdateManifest
 import com.xparcade.tvkiosk.domain.model.ForceUnlockRequest
 import com.xparcade.tvkiosk.domain.model.LastPaymentWrapper
+import com.xparcade.tvkiosk.domain.model.PairTvDeviceRequest
+import com.xparcade.tvkiosk.domain.model.PairTvDeviceResponse
 import com.xparcade.tvkiosk.domain.model.SessionStatusResponse
 import com.xparcade.tvkiosk.domain.model.StationConfigResponse
 import com.xparcade.tvkiosk.domain.model.TvStatusResponse
@@ -40,8 +42,13 @@ interface BackendApiService {
     @GET("/api/integrations/tv/status")
     suspend fun getTvStatus(
         @Query("stationId") stationId: String,
-        @Header("x-device-key") deviceKey: String
+        @Header("x-tv-device-token") deviceToken: String
     ): TvStatusResponse
+
+    @POST("/api/integrations/tv/pair")
+    suspend fun pairTvDevice(
+        @Body request: PairTvDeviceRequest
+    ): PairTvDeviceResponse
 
     @POST("/api/sessions/create-payment")
     suspend fun createPayment(

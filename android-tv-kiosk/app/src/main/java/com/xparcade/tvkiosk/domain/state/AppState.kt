@@ -3,6 +3,7 @@ package com.xparcade.tvkiosk.domain.state
 enum class AppState {
     IDLE,
     INITIAL_SETUP,
+    PAIRING_REQUIRED,
     SELECTING_TIME,
     PAYMENT_PENDING,
     PAYMENT_PAID,

@@ -10,6 +10,9 @@ import com.xparcade.tvkiosk.integration.hdmi.HdmiInputInfo
 data class KioskUiState(
     val appState: AppState = AppState.IDLE,
     val stationName: String = "TV",
+    val pairingCode: String = "",
+    val pairingMessage: String? = null,
+    val isPairing: Boolean = false,
     val pricingOptions: List<PricingOption> = emptyList(),
     val selectedOption: PricingOption? = null,
     val payment: CreatePaymentResponse? = null,

@@ -87,6 +87,20 @@ class PreferencesRepository(private val context: Context) {
         }
     }
 
+    suspend fun clearPairing() {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.isConfigured] = false
+            prefs[Keys.stationId] = ""
+            prefs[Keys.stationName] = ""
+            prefs[Keys.stationToken] = ""
+            prefs[Keys.deviceKey] = ""
+            prefs.remove(Keys.activeSessionId)
+            prefs.remove(Keys.activeSessionExpiresAt)
+            prefs.remove(Keys.activeSessionDuration)
+            prefs.remove(Keys.activeSessionSource)
+        }
+    }
+
     suspend fun saveActiveSession(activeSession: ActiveSession) {
         context.dataStore.edit { prefs ->
             prefs[Keys.activeSessionId] = activeSession.sessionId
