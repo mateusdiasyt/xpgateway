@@ -1,13 +1,5 @@
 package com.xparcade.tvkiosk.ui.components
 
-import android.annotation.SuppressLint
-import android.graphics.Color
-import android.os.Handler
-import android.os.Looper
-import android.webkit.JavascriptInterface
-import android.webkit.WebChromeClient
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -17,150 +9,93 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
 
-private class YouTubePlayerBridge(
-    private val onEnded: () -> Unit,
-    private val onProgress: (Double, Double) -> Unit
-) {
-    private val mainHandler = Handler(Looper.getMainLooper())
-
-    @JavascriptInterface
-    fun ended() {
-        mainHandler.post(onEnded)
-    }
-
-    @JavascriptInterface
-    fun failed() {
-        mainHandler.postDelayed(onEnded, 900)
-    }
-
-    @JavascriptInterface
-    fun progress(current: Double, duration: Double) {
-        mainHandler.post { onProgress(current, duration) }
-    }
-}
-
-private fun playerHtml(videoId: String) = """
-    <!doctype html>
-    <html>
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-        <style>
-          html, body, #player {
-            width: 100%;
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            background: #05070b;
-          }
-        </style>
-      </head>
-      <body>
-        <div id="player"></div>
-        <script src="https://www.youtube.com/iframe_api"></script>
-        <script>
-          var player;
-          var progressTimer;
-          function onYouTubeIframeAPIReady() {
-            player = new YT.Player('player', {
-              videoId: '$videoId',
-              playerVars: {
-                autoplay: 1,
-                controls: 0,
-                disablekb: 1,
-                fs: 0,
-                playsinline: 1,
-                rel: 0,
-                modestbranding: 1
-              },
-              events: {
-                onReady: function(event) {
-                  event.target.setVolume(45);
-                  event.target.playVideo();
-                  progressTimer = setInterval(function() {
-                    if (!player || !player.getDuration) return;
-                    AndroidBridge.progress(player.getCurrentTime() || 0, player.getDuration() || 0);
-                  }, 1000);
-                },
-                onStateChange: function(event) {
-                  if (event.data === YT.PlayerState.ENDED) {
-                    if (progressTimer) clearInterval(progressTimer);
-                    AndroidBridge.ended();
-                  }
-                },
-                onError: function() {
-                  if (progressTimer) clearInterval(progressTimer);
-                  AndroidBridge.failed();
-                }
-              }
-            });
-          }
-        </script>
-      </body>
-    </html>
-""".trimIndent()
-
-@SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun YouTubeTrailerPlayer(
     videoId: String,
+    playbackKey: Int,
     modifier: Modifier = Modifier,
     onEnded: () -> Unit,
     onProgress: (Double, Double) -> Unit
 ) {
+    val latestVideoId by rememberUpdatedState(videoId)
+    val latestPlaybackKey by rememberUpdatedState(playbackKey)
     val latestOnEnded by rememberUpdatedState(onEnded)
     val latestOnProgress by rememberUpdatedState(onProgress)
-    var webView by remember { mutableStateOf<WebView?>(null) }
+    var playerView by remember { mutableStateOf<YouTubePlayerView?>(null) }
+    var player by remember { mutableStateOf<YouTubePlayer?>(null) }
+    var loadedPlayback by remember { mutableStateOf("") }
+    var durationSeconds by remember { mutableStateOf(0.0) }
 
     DisposableEffect(Unit) {
         onDispose {
-            webView?.stopLoading()
-            webView?.removeJavascriptInterface("AndroidBridge")
-            webView?.destroy()
-            webView = null
+            playerView?.release()
+            playerView = null
+            player = null
         }
     }
 
     AndroidView(
         modifier = modifier,
         factory = { context ->
-            WebView(context).apply {
-                setBackgroundColor(Color.BLACK)
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.mediaPlaybackRequiresUserGesture = false
-                settings.javaScriptCanOpenWindowsAutomatically = false
-                webViewClient = WebViewClient()
-                webChromeClient = WebChromeClient()
-                addJavascriptInterface(
-                    YouTubePlayerBridge(
-                        onEnded = { latestOnEnded() },
-                        onProgress = { current, duration -> latestOnProgress(current, duration) }
-                    ),
-                    "AndroidBridge"
+            YouTubePlayerView(context).apply {
+                enableAutomaticInitialization = false
+                initialize(
+                    object : AbstractYouTubePlayerListener() {
+                        override fun onReady(youTubePlayer: YouTubePlayer) {
+                            player = youTubePlayer
+                            val playback = "${latestVideoId}:${latestPlaybackKey}"
+                            loadedPlayback = playback
+                            youTubePlayer.setVolume(45)
+                            youTubePlayer.loadVideo(latestVideoId, 0f)
+                        }
+
+                        override fun onStateChange(
+                            youTubePlayer: YouTubePlayer,
+                            state: PlayerConstants.PlayerState
+                        ) {
+                            if (state == PlayerConstants.PlayerState.ENDED) {
+                                latestOnEnded()
+                            }
+                        }
+
+                        override fun onCurrentSecond(
+                            youTubePlayer: YouTubePlayer,
+                            second: Float
+                        ) {
+                            latestOnProgress(second.toDouble(), durationSeconds)
+                        }
+
+                        override fun onVideoDuration(
+                            youTubePlayer: YouTubePlayer,
+                            duration: Float
+                        ) {
+                            durationSeconds = duration.toDouble()
+                            latestOnProgress(0.0, durationSeconds)
+                        }
+
+                        override fun onError(
+                            youTubePlayer: YouTubePlayer,
+                            error: PlayerConstants.PlayerError
+                        ) {
+                            latestOnEnded()
+                        }
+                    },
+                    true
                 )
-                tag = videoId
-                loadDataWithBaseURL(
-                    "https://www.youtube.com",
-                    playerHtml(videoId),
-                    "text/html",
-                    "UTF-8",
-                    null
-                )
-                webView = this
+                playerView = this
             }
         },
-        update = { view ->
-            if (view.tag != videoId) {
-                view.tag = videoId
-                view.loadDataWithBaseURL(
-                    "https://www.youtube.com",
-                    playerHtml(videoId),
-                    "text/html",
-                    "UTF-8",
-                    null
-                )
+        update = {
+            val playback = "$videoId:$playbackKey"
+            if (loadedPlayback != playback) {
+                loadedPlayback = playback
+                durationSeconds = 0.0
+                player?.loadVideo(videoId, 0f)
             }
         }
     )

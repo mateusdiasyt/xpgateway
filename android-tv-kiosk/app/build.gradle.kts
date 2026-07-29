@@ -11,8 +11,8 @@ android {
         applicationId = "com.xparcade.tvkiosk"
         minSdk = 26
         targetSdk = 35
-        versionCode = 11
-        versionName = "0.2.0"
+        versionCode = 12
+        versionName = "0.2.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -91,6 +91,7 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
     implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("com.pierfrancescosoffritti.androidyoutubeplayer:core:12.1.0")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

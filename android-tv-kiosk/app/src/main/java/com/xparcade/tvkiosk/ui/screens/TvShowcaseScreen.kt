@@ -1,5 +1,8 @@
 package com.xparcade.tvkiosk.ui.screens
 
+import android.graphics.BitmapFactory
+import android.util.Base64
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +33,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -65,6 +70,7 @@ fun TvShowcaseScreen(
     val trailers = display.displayConfig.trailers.filter { it.youtubeVideoId.isNotBlank() }
     val gamePages = display.displayConfig.games.chunked(6).ifEmpty { listOf(emptyList()) }
     var trailerIndex by remember(trailers) { mutableIntStateOf(0) }
+    var trailerPlaybackKey by remember(trailers) { mutableIntStateOf(0) }
     var gamePageIndex by remember(gamePages) { mutableIntStateOf(0) }
     var trailerCurrentSeconds by remember { mutableDoubleStateOf(0.0) }
     var trailerDurationSeconds by remember { mutableDoubleStateOf(0.0) }
@@ -79,6 +85,7 @@ fun TvShowcaseScreen(
 
     LaunchedEffect(trailers) {
         trailerIndex = 0
+        trailerPlaybackKey = 0
         trailerCurrentSeconds = 0.0
         trailerDurationSeconds = 0.0
     }
@@ -115,6 +122,7 @@ fun TvShowcaseScreen(
                         .fillMaxHeight(),
                     trailerTitle = trailers.getOrNull(trailerIndex)?.title,
                     trailerVideoId = trailers.getOrNull(trailerIndex)?.youtubeVideoId,
+                    trailerPlaybackKey = trailerPlaybackKey,
                     trailerPosition = trailerIndex,
                     trailerCount = trailers.size,
                     nextTrailerTitle = trailers.getOrNull((trailerIndex + 1).modOrZero(trailers.size))?.title,
@@ -127,6 +135,7 @@ fun TvShowcaseScreen(
                     onEnded = {
                         if (trailers.isNotEmpty()) {
                             trailerIndex = (trailerIndex + 1) % trailers.size
+                            trailerPlaybackKey += 1
                             trailerCurrentSeconds = 0.0
                             trailerDurationSeconds = 0.0
                         }
@@ -235,6 +244,7 @@ private fun TrailerPanel(
     modifier: Modifier,
     trailerTitle: String?,
     trailerVideoId: String?,
+    trailerPlaybackKey: Int,
     trailerPosition: Int,
     trailerCount: Int,
     nextTrailerTitle: String?,
@@ -256,6 +266,7 @@ private fun TrailerPanel(
             if (!trailerVideoId.isNullOrBlank()) {
                 YouTubeTrailerPlayer(
                     videoId = trailerVideoId,
+                    playbackKey = trailerPlaybackKey,
                     modifier = Modifier.fillMaxSize(),
                     onEnded = onEnded,
                     onProgress = onProgress
@@ -318,7 +329,7 @@ private fun TrailerPanel(
             )
             if (!nextTrailerTitle.isNullOrBlank() && trailerCount > 1) {
                 Text(
-                    text = "PROXIMO: ${nextTrailerTitle.uppercase()}",
+                    text = "PRÓXIMO: ${nextTrailerTitle.uppercase()}",
                     color = ShowcaseMuted,
                     fontSize = 10.sp,
                     maxLines = 1,
@@ -352,30 +363,23 @@ private fun CashierCallout(
             )
             Spacer(modifier = Modifier.height(18.dp))
             Text(
-                text = "VA ATE O CAIXA",
+                text = "VÁ ATÉ O CAIXA",
                 color = XpYellow,
                 fontSize = 25.sp,
                 fontWeight = FontWeight.Black
             )
             Text(
-                text = "PARA LIBERAR\nESTA TV",
+                text = "PARA LIBERAR O\n${stationName.uppercase()}",
                 color = XpWhite,
                 fontSize = 42.sp,
                 lineHeight = 45.sp,
-                fontWeight = FontWeight.Black
+                fontWeight = FontWeight.Black,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
             )
             Spacer(modifier = Modifier.height(14.dp))
             Text(
-                text = "INFORME: ${stationName.uppercase()}",
-                color = XpYellow,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.ExtraBold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = if (backendOnline) "A liberacao acontece automaticamente." else waitingMessage,
+                text = if (backendOnline) "A liberação acontece automaticamente." else waitingMessage,
                 color = if (backendOnline) ShowcaseMuted else Color(0xFFFF8D98),
                 fontSize = 13.sp,
                 lineHeight = 18.sp
@@ -399,7 +403,7 @@ private fun GamesPanel(
     ) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "JOGOS DISPONIVEIS",
+                text = "JOGOS DISPONÍVEIS",
                 color = XpWhite,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.ExtraBold
@@ -426,7 +430,7 @@ private fun GamesPanel(
         if (games.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = "CATALOGO EM ATUALIZACAO",
+                    text = "CATÁLOGO EM ATUALIZAÇÃO",
                     color = ShowcaseMuted,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
@@ -435,13 +439,19 @@ private fun GamesPanel(
         } else {
             Row(
                 modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(
+                    12.dp,
+                    Alignment.CenterHorizontally
+                ),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 games.forEach { game ->
-                    GameCover(game = game, modifier = Modifier.weight(1f))
-                }
-                repeat(6 - games.size) {
-                    Spacer(modifier = Modifier.weight(1f))
+                    GameCover(
+                        game = game,
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .aspectRatio(2f / 3f)
+                    )
                 }
             }
         }
@@ -450,6 +460,10 @@ private fun GamesPanel(
 
 @Composable
 private fun GameCover(game: TvDisplayGameResponse, modifier: Modifier = Modifier) {
+    val coverImage = remember(game.imageDataUrl) {
+        decodeDataUrlImage(game.imageDataUrl)
+    }
+
     Column(
         modifier = modifier
             .fillMaxHeight()
@@ -457,14 +471,31 @@ private fun GameCover(game: TvDisplayGameResponse, modifier: Modifier = Modifier
             .background(Color(0xFF111722))
             .border(1.dp, Color(0xFF303B4C), RoundedCornerShape(10.dp))
     ) {
-        AsyncImage(
-            model = game.imageDataUrl,
-            contentDescription = game.title,
-            contentScale = ContentScale.Crop,
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-        )
+                .background(Color(0xFF080B10)),
+            contentAlignment = Alignment.Center
+        ) {
+            if (coverImage != null) {
+                Image(
+                    bitmap = coverImage,
+                    contentDescription = "Capa de ${game.title}",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(4.dp)
+                )
+            } else {
+                Text(
+                    text = "SEM CAPA",
+                    color = ShowcaseMuted,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
         Text(
             text = game.title.uppercase(),
             color = XpWhite,
@@ -478,6 +509,16 @@ private fun GameCover(game: TvDisplayGameResponse, modifier: Modifier = Modifier
                 .padding(horizontal = 6.dp, vertical = 8.dp)
         )
     }
+}
+
+private fun decodeDataUrlImage(value: String): ImageBitmap? {
+    val separator = value.indexOf(',')
+    if (!value.startsWith("data:image/") || separator < 0) return null
+
+    return runCatching {
+        val bytes = Base64.decode(value.substring(separator + 1), Base64.DEFAULT)
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+    }.getOrNull()
 }
 
 private fun Int.modOrZero(divisor: Int): Int = if (divisor > 0) this % divisor else 0
