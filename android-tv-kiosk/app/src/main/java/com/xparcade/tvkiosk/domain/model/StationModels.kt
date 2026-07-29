@@ -41,7 +41,36 @@ data class TvStatusResponse(
     val requiresPairing: Boolean = false,
     val pairingUrl: String? = null,
     val adminPin: String? = null,
+    val displayConfigVersion: Int = 1,
     val message: String? = null
+)
+
+data class TvDisplayGameResponse(
+    val id: String = "",
+    val title: String = "",
+    val imageDataUrl: String = ""
+)
+
+data class TvDisplayTrailerResponse(
+    val id: String = "",
+    val title: String = "",
+    val youtubeUrl: String = "",
+    val youtubeVideoId: String = ""
+)
+
+data class TvDisplayConfigurationResponse(
+    val games: List<TvDisplayGameResponse> = emptyList(),
+    val trailers: List<TvDisplayTrailerResponse> = emptyList()
+)
+
+data class TvDisplaySnapshotResponse(
+    val deviceId: String = "",
+    val deviceLabel: String = "",
+    val stationId: String = "",
+    val tenantName: String = "Mendoza PDV",
+    val tenantLogoDataUrl: String? = null,
+    val displayConfigVersion: Int = 1,
+    val displayConfig: TvDisplayConfigurationResponse = TvDisplayConfigurationResponse()
 )
 
 data class PairTvDeviceRequest(

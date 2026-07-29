@@ -16,10 +16,10 @@ import com.xparcade.tvkiosk.ui.screens.AdminDialog
 import com.xparcade.tvkiosk.ui.screens.AppUpdateRequiredScreen
 import com.xparcade.tvkiosk.ui.screens.ErrorScreen
 import com.xparcade.tvkiosk.ui.screens.InitialSetupScreen
-import com.xparcade.tvkiosk.ui.screens.LockScreen
 import com.xparcade.tvkiosk.ui.screens.PairingRequiredScreen
 import com.xparcade.tvkiosk.ui.screens.PreparationScreen
 import com.xparcade.tvkiosk.ui.screens.SessionActiveScreen
+import com.xparcade.tvkiosk.ui.screens.TvShowcaseScreen
 
 @Composable
 fun KioskApp(viewModel: KioskViewModel) {
@@ -87,11 +87,11 @@ fun KioskApp(viewModel: KioskViewModel) {
         }
 
         else -> {
-            LockScreen(
+            TvShowcaseScreen(
                 stationName = uiState.stationName,
                 backendOnline = uiState.backendOnline,
                 waitingMessage = uiState.paymentStatusMessage,
-                lastPaymentSummary = uiState.lastPaymentSummary,
+                display = uiState.tvDisplay,
                 onConfigureDevice = { viewModel.showAdminPinPrompt() }
             )
         }

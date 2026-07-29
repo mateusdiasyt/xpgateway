@@ -4,6 +4,7 @@ import com.xparcade.tvkiosk.domain.model.ActiveSession
 import com.xparcade.tvkiosk.domain.model.AppUpdateManifest
 import com.xparcade.tvkiosk.domain.model.CreatePaymentResponse
 import com.xparcade.tvkiosk.domain.model.PricingOption
+import com.xparcade.tvkiosk.domain.model.TvDisplaySnapshotResponse
 import com.xparcade.tvkiosk.data.local.StationPreset
 import com.xparcade.tvkiosk.integration.hdmi.HdmiInputInfo
 
@@ -42,5 +43,6 @@ data class KioskUiState(
     val timerOverlayStatusMessage: String? = null,
     val requiredAppUpdate: AppUpdateManifest? = null,
     val appUpdateStatusMessage: String? = null,
-    val isDownloadingAppUpdate: Boolean = false
+    val isDownloadingAppUpdate: Boolean = false,
+    val tvDisplay: TvDisplaySnapshotResponse = TvDisplaySnapshotResponse()
 )

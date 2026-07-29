@@ -11,6 +11,7 @@ import com.xparcade.tvkiosk.domain.model.StationConfigResponse
 import com.xparcade.tvkiosk.domain.model.PairTvDeviceRequest
 import com.xparcade.tvkiosk.domain.model.PairTvDeviceResponse
 import com.xparcade.tvkiosk.domain.model.TvStatusResponse
+import com.xparcade.tvkiosk.domain.model.TvDisplaySnapshotResponse
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -113,6 +114,12 @@ class BackendRepository {
     suspend fun getTvStatus(config: AppConfig): TvStatusResponse {
         return getApi(config.backendUrl).getTvStatus(
             stationId = config.stationId,
+            deviceToken = resolveDeviceToken(config)
+        )
+    }
+
+    suspend fun getTvDisplay(config: AppConfig): TvDisplaySnapshotResponse {
+        return getApi(config.backendUrl).getTvDisplay(
             deviceToken = resolveDeviceToken(config)
         )
     }

@@ -10,6 +10,7 @@ import com.xparcade.tvkiosk.domain.model.PairTvDeviceResponse
 import com.xparcade.tvkiosk.domain.model.SessionStatusResponse
 import com.xparcade.tvkiosk.domain.model.StationConfigResponse
 import com.xparcade.tvkiosk.domain.model.TvStatusResponse
+import com.xparcade.tvkiosk.domain.model.TvDisplaySnapshotResponse
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
@@ -44,6 +45,11 @@ interface BackendApiService {
         @Query("stationId") stationId: String,
         @Header("x-tv-device-token") deviceToken: String
     ): TvStatusResponse
+
+    @GET("/api/integrations/tv/display")
+    suspend fun getTvDisplay(
+        @Header("x-tv-device-token") deviceToken: String
+    ): TvDisplaySnapshotResponse
 
     @POST("/api/integrations/tv/pair")
     suspend fun pairTvDevice(

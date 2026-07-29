@@ -64,6 +64,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     private var pdvPollJob: Job? = null
     private var activeMonitorJob: Job? = null
     private var appUpdateMonitorJob: Job? = null
+    private var loadedDisplayConfigVersion = -1
 
     private val secretSequence = listOf(
         KeyEvent.KEYCODE_DPAD_UP,
@@ -141,6 +142,19 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         config = normalized
     }
 
+    private suspend fun syncTvDisplay(remoteVersion: Int) {
+        if (remoteVersion == loadedDisplayConfigVersion) return
+
+        val display = runCatching {
+            backendRepository.getTvDisplay(config)
+        }.getOrNull() ?: return
+
+        loadedDisplayConfigVersion = display.displayConfigVersion
+        _uiState.update {
+            it.copy(tvDisplay = display)
+        }
+    }
+
     private suspend fun enterPairingMode(message: String? = null) {
         stopPdvPolling()
         stopActiveSessionMonitor()
@@ -148,6 +162,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         stopSessionGuard()
         preferencesRepository.clearPairing()
         config = preferencesRepository.getConfig().copy(unlockMode = UnlockMode.PDV_ONLY)
+        loadedDisplayConfigVersion = -1
         _uiState.update {
             it.copy(
                 isLoading = false,
@@ -162,7 +177,8 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                 preparationRemainingSeconds = 0,
                 appState = AppState.PAIRING_REQUIRED,
                 pairingMessage = message ?: "Pareamento obrigatorio. Gere um codigo no painel e digite aqui.",
-                paymentStatusMessage = "Pareamento obrigatorio."
+                paymentStatusMessage = "Pareamento obrigatorio.",
+                tvDisplay = com.xparcade.tvkiosk.domain.model.TvDisplaySnapshotResponse()
             )
         }
     }
@@ -498,6 +514,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                 try {
                     val tvStatus = backendRepository.getTvStatus(config)
                     syncAdminPin(tvStatus.adminPin)
+                    syncTvDisplay(tvStatus.displayConfigVersion)
 
                     if (tvStatus.requiresPairing || tvStatus.status.equals("PAIRING_REQUIRED", true)) {
                         enterPairingMode(tvStatus.message ?: "Esta TV precisa ser pareada novamente.")
