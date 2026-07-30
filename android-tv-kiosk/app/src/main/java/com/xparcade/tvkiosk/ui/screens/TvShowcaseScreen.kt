@@ -8,10 +8,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -337,20 +338,35 @@ private fun TrailerPanel(
 ) {
     Column(
         modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
             .border(1.dp, ShowcaseBorder, RoundedCornerShape(12.dp))
             .background(ShowcasePanel, RoundedCornerShape(12.dp))
             .padding(14.dp)
     ) {
-        Box(
+        BoxWithConstraints(
             modifier = Modifier
                 .weight(1f)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .clipToBounds(),
             contentAlignment = Alignment.Center
         ) {
+            val targetRatio = 16f / 9f
+            val availableRatio = maxWidth.value / maxHeight.value
+            val playerWidth = if (availableRatio > targetRatio) {
+                maxHeight * targetRatio
+            } else {
+                maxWidth
+            }
+            val playerHeight = if (availableRatio > targetRatio) {
+                maxHeight
+            } else {
+                maxWidth / targetRatio
+            }
+
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(16f / 9f)
+                    .width(playerWidth)
+                    .height(playerHeight)
                     .clip(RoundedCornerShape(10.dp))
                     .background(Color.Black)
                     .border(1.dp, ShowcaseBorder, RoundedCornerShape(10.dp)),
