@@ -12,6 +12,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.options.IFramePlayerOptions
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
 
 @Composable
@@ -42,6 +43,13 @@ fun YouTubeTrailerPlayer(
     AndroidView(
         modifier = modifier,
         factory = { context ->
+            val playerOptions = IFramePlayerOptions.Builder()
+                .autoplay(1)
+                .controls(1)
+                .rel(0)
+                .origin("https://${context.packageName}")
+                .build()
+
             YouTubePlayerView(context).apply {
                 enableAutomaticInitialization = false
                 initialize(
@@ -85,7 +93,8 @@ fun YouTubeTrailerPlayer(
                             latestOnEnded()
                         }
                     },
-                    true
+                    true,
+                    playerOptions
                 )
                 playerView = this
             }

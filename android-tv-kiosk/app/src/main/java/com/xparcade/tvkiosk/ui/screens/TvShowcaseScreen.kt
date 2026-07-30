@@ -38,7 +38,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -68,7 +67,7 @@ fun TvShowcaseScreen(
     onConfigureDevice: () -> Unit
 ) {
     val trailers = display.displayConfig.trailers.filter { it.youtubeVideoId.isNotBlank() }
-    val gamePages = display.displayConfig.games.chunked(6).ifEmpty { listOf(emptyList()) }
+    val gamePages = display.displayConfig.games.chunked(4).ifEmpty { listOf(emptyList()) }
     var trailerIndex by remember(trailers) { mutableIntStateOf(0) }
     var trailerPlaybackKey by remember(trailers) { mutableIntStateOf(0) }
     var gamePageIndex by remember(gamePages) { mutableIntStateOf(0) }
@@ -440,7 +439,7 @@ private fun GamesPanel(
             Row(
                 modifier = Modifier.fillMaxSize(),
                 horizontalArrangement = Arrangement.spacedBy(
-                    12.dp,
+                    18.dp,
                     Alignment.CenterHorizontally
                 ),
                 verticalAlignment = Alignment.CenterVertically
@@ -450,7 +449,7 @@ private fun GamesPanel(
                         game = game,
                         modifier = Modifier
                             .fillMaxHeight()
-                            .aspectRatio(2f / 3f)
+                            .aspectRatio(3f / 4f)
                     )
                 }
             }
@@ -464,50 +463,29 @@ private fun GameCover(game: TvDisplayGameResponse, modifier: Modifier = Modifier
         decodeDataUrlImage(game.imageDataUrl)
     }
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxHeight()
             .clip(RoundedCornerShape(10.dp))
             .background(Color(0xFF111722))
-            .border(1.dp, Color(0xFF303B4C), RoundedCornerShape(10.dp))
+            .border(1.dp, Color(0xFF303B4C), RoundedCornerShape(10.dp)),
+        contentAlignment = Alignment.Center
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .background(Color(0xFF080B10)),
-            contentAlignment = Alignment.Center
-        ) {
-            if (coverImage != null) {
-                Image(
-                    bitmap = coverImage,
-                    contentDescription = "Capa de ${game.title}",
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(4.dp)
-                )
-            } else {
-                Text(
-                    text = "SEM CAPA",
-                    color = ShowcaseMuted,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+        if (coverImage != null) {
+            Image(
+                bitmap = coverImage,
+                contentDescription = "Capa de ${game.title}",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Text(
+                text = "SEM CAPA",
+                color = ShowcaseMuted,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
-        Text(
-            text = game.title.uppercase(),
-            color = XpWhite,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.ExtraBold,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 6.dp, vertical = 8.dp)
-        )
     }
 }
 
