@@ -48,7 +48,9 @@ data class TvStatusResponse(
 data class TvDisplayGameResponse(
     val id: String = "",
     val title: String = "",
-    val imageDataUrl: String = ""
+    val imageDataUrl: String = "",
+    val youtubeUrl: String = "",
+    val youtubeVideoId: String = ""
 )
 
 data class TvDisplayTrailerResponse(
